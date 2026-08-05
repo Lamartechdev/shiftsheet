@@ -247,19 +247,39 @@
 
   <script>
     // ========== DATA ==========
-    const knownLocations = [
-      "SFS",
-      "Vinvale, CA",
-      "La Puente, CA",
-      "Montebello, CA",
-      "Irwindale, CA",
-      "Monrovia, CA",
-      "Gardena, CA",
-      "Diamond Bar, CA",
-      "Wilmington, CA",
-      "Huntington Beach, CA",
-      "Other"
-    ];
+   const baseLocations = [
+  "SFS",
+  "Vinvale, CA",
+  "La Puente, CA",
+  "Montebello, CA",
+  "Irwindale, CA",
+  "Monrovia, CA",
+  "Gardena, CA",
+  "Diamond Bar, CA",
+  "Wilmington, CA",
+  "Huntington Beach, CA"
+];
+
+function loadCustomLocations() {
+  try {
+    const saved = localStorage.getItem("shiftSheet_customLocations");
+    return saved ? JSON.parse(saved) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveCustomLocation(loc) {
+  if (!loc || baseLocations.includes(loc)) return;
+  const customLocations = loadCustomLocations();
+  if (!customLocations.includes(loc)) {
+    customLocations.push(loc);
+    localStorage.setItem("shiftSheet_customLocations", JSON.stringify(customLocations));
+    knownLocations = [...baseLocations, ...customLocations, "Other"];
+  }
+}
+
+let knownLocations = [...baseLocations, ...loadCustomLocations(), "Other"];
 
     const activityOptions = [
       "Pre-Trip Inspection",
@@ -323,10 +343,10 @@
             ${knownLocations.map(l => `<option value="${l}" ${locationValue === l || (isOtherLoc && l === "Other") ? "selected" : ""}>${l}</option>`).join("")}
           </select>
           <input type="text" id="locOther_${stop.id}" class="other-input ${isOtherLoc ? "" : "hidden"}"
-                 placeholder="Enter location"
-                 value="${isOtherLoc && locationValue !== "Other" ? locationValue : ""}"
-                 oninput="updateStop(${stop.id}, 'location', this.value)">
-
+       placeholder="Enter location"
+       value="${isOtherLoc && locationValue !== "Other" ? locationValue : ""}"
+       oninput="updateStop(${stop.id}, 'location', this.value)"
+       onblur="saveCustomLocation(this.value); renderAll();">
           <label>Invoice #</label>
           <input type="text" value="${stop.invoice || ""}" placeholder="Invoice / BOL number"
                  oninput="updateStop(${stop.id}, 'invoice', this.value)">
