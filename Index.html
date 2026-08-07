@@ -672,15 +672,38 @@ function addStop() {
         </div>
       `;
 
-      // Open print-friendly window
+      // Open preview window (scrollable/zoomable — no auto-print)
       const printWin = window.open("", "_blank");
-      printWin.document.write(`<!DOCTYPE html><html><head><title>ShiftSheet Timesheet</title>
-        <style>body{margin:20px;} @media print{body{margin:0;}}</style></head><body>${html}</body></html>`);
+      printWin.document.write(`<!DOCTYPE html><html><head><title>Elite Fuels Timesheet</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          body{margin:0; background:#525659;}
+          .preview-toolbar{
+            position:sticky; top:0; z-index:10;
+            background:#1a365d; padding:12px; text-align:center;
+            box-shadow:0 2px 6px rgba(0,0,0,0.3);
+          }
+          .preview-toolbar button{
+            background:#2b6cb0; color:white; border:none;
+            padding:12px 24px; border-radius:8px; font-size:1rem;
+            font-weight:600; cursor:pointer;
+          }
+          .preview-toolbar button:active{ background:#2c5282; }
+          .sheet-wrap{ background:white; margin:16px auto; padding:20px; max-width:800px; }
+          @media print{
+            .preview-toolbar{ display:none; }
+            body{ background:white; }
+            .sheet-wrap{ margin:0; padding:0; }
+          }
+        </style></head><body>
+        <div class="preview-toolbar">
+          <button onclick="window.print()">Print / Save as PDF</button>
+        </div>
+        <div class="sheet-wrap">${html}</div>
+        </body></html>`);
       printWin.document.close();
       printWin.focus();
-      setTimeout(() => { printWin.print(); }, 300);
     }
-
     // ========== INIT ==========
     document.getElementById("addStopBtn").addEventListener("click", addStop);
     document.getElementById("generateBtn").addEventListener("click", generateTimesheet);
