@@ -364,7 +364,8 @@ let knownLocations = [...baseLocations, ...loadCustomLocations(), "Other"];
        <button type="button" class="btn-secondary" style="margin-top:-4px; margin-bottom:10px; padding:8px; font-size:0.8rem;" onclick="openManageLocations()">Manage Saved Locations</button>
           <label>Invoice #</label>
           <input type="text" value="${stop.invoice || ""}" placeholder="Invoice / BOL number"
-                 oninput="updateStop(${stop.id}, 'invoice', this.value)">
+                 oninput="updateStop(${stop.id}, 'invoice', this.value)"
+                 onblur="carryInvoiceForward(${index})">
 
           <div class="row">
             <div>
@@ -384,7 +385,7 @@ let knownLocations = [...baseLocations, ...loadCustomLocations(), "Other"];
           </div>
 
           <label>Comments / Activity</label>
-          <select onchange="updateStop(${stop.id}, 'activity', this.value); toggleOther(this, 'actOther_${stop.id}')">
+          <select onchange="updateStop(${stop.id}, 'activity', this.value); toggleOther(this, 'actOther_${stop.id}'); carryInvoiceForward(${index})">
             <option value="">— Select —</option>
             ${activityOptions.map(a => `<option value="${a}" ${activityValue === a || (isOtherAct && a === "Other") ? "selected" : ""}>${a}</option>`).join("")}
           </select>
@@ -396,11 +397,21 @@ let knownLocations = [...baseLocations, ...loadCustomLocations(), "Other"];
           <label>Odometer (Miles)</label>
           <input type="number" inputmode="numeric" value="${stop.odometer || ""}"
                  placeholder="${index === 0 ? "Starting mileage" : "Confirm or edit"}"
-                 oninput="updateStop(${stop.id}, 'odometer', this.value); updateNextOdometer(${index})">
+                 oninput="updateStop(${stop.id}, 'odometer', this.value); updateTotals()"
+                 onblur="updateNextOdometer(${index})">
         </div>
       `;
     }
-
+    function carryInvoiceForward(index) {
+      const stop = stops[index];
+      if (stop.activity === "Loading" && index + 1 < stops.length) {
+        const next = stops[index + 1];
+        if (!next.invoice) {
+          next.invoice = stop.invoice || "";
+          renderAll();
+        }
+      }
+    }
     function toggleOther(selectEl, otherId) {
       const other = document.getElementById(otherId);
       if (selectEl.value === "Other") {
@@ -445,12 +456,14 @@ function deleteCustomLocation(loc) {
   renderAll();
 }
     // ========== CORE LOGIC ==========
-    function addStop() {
+function addStop() {
       const prevOdo = stops.length > 0 ? stops[stops.length - 1].odometer : "";
+      const prevStop = stops.length > 0 ? stops[stops.length - 1] : null;
+      const carriedInvoice = (prevStop && prevStop.activity === "Loading") ? (prevStop.invoice || "") : "";
       const newStop = {
         id: nextId++,
         location: "",
-        invoice: "",
+        invoice: carriedInvoice,
         arrived: "",
         left: "",
         durationMinutes: null,
@@ -461,7 +474,6 @@ function deleteCustomLocation(loc) {
       stops.push(newStop);
       renderAll();
     }
-
     function removeStop(id) {
       stops = stops.filter(s => s.id !== id);
       // re-prefill odometers after removal
@@ -487,17 +499,14 @@ function deleteCustomLocation(loc) {
       updateTotals();
     }
 
-    function updateNextOdometer(index) {
-      // when current odometer changes, pre-fill the next stop if it is empty or still matches old value
-      if (index + 1 < stops.length) {
-        const next = stops[index + 1];
-        // simple approach: always push forward the value so driver can overwrite
-        next.odometer = stops[index].odometer || "";
-        renderAll(); // re-render to show updated pre-fill
+   function updateNextOdometer(index) {
+      // when current odometer changes, cascade the value forward through every later stop
+      for (let i = index + 1; i < stops.length; i++) {
+        stops[i].odometer = stops[index].odometer || "";
       }
+      renderAll(); // re-render to show updated pre-fills
       updateTotals();
     }
-
     function updateTotals() {
       let totalMins = 0;
       stops.forEach(s => {
