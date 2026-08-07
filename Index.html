@@ -356,7 +356,7 @@ let knownLocations = [...baseLocations, ...loadCustomLocations(), "Other"];
           <label>Location</label>
           <select onchange="updateStop(${stop.id}, 'location', this.value); toggleOther(this, 'locOther_${stop.id}')">
             <option value="">— Select —</option>
-            ${knownLocations.map(l => `<option value="${l}" ${locationValue === l || (isOtherLoc && l === "Other") ? "selected" : ""}>${l}</option>`).join("")}
+       ${[...knownLocations].sort((a, b) => a === "Other" ? 1 : b === "Other" ? -1 : a.localeCompare(b)).map(l => `<option value="${l}" ${locationValue === l || (isOtherLoc && l === "Other") ? "selected" : ""}>${l}</option>`).join("")}
           </select>
           <input type="text" id="locOther_${stop.id}" class="other-input ${isOtherLoc ? "" : "hidden"}"
        placeholder="Enter location"
