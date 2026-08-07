@@ -568,6 +568,7 @@ function addStop() {
       const trailer = document.getElementById("trailerNum").value || "";
       const shiftType = document.querySelector('input[name="shiftType"]:checked')?.value || "NIGHT";
       const stateType = document.querySelector('input[name="stateType"]:checked')?.value || "CA";
+      const mailtoLink = `mailto:Billing@elitefueltrans.com?subject=${encodeURIComponent(`Timesheet - ${name} - ${date}`)}`;
       let totalMins = 0;
       let startOdo = null, endOdo = null;
       stops.forEach(s => {
@@ -696,8 +697,9 @@ function addStop() {
             .sheet-wrap{ margin:0; padding:0; }
           }
         </style></head><body>
-        <div class="preview-toolbar">
+       <div class="preview-toolbar">
           <button onclick="window.print()">Print / Save as PDF</button>
+          <a href="${mailtoLink}" style="display:inline-block; background:#276749; color:white; border:none; padding:12px 24px; border-radius:8px; font-size:1rem; font-weight:600; text-decoration:none; margin-left:8px;">Email Timesheet</a>
         </div>
         <div class="sheet-wrap">${html}</div>
         </body></html>`);
