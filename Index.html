@@ -515,7 +515,7 @@ function deleteCustomLocation(loc) {
     // ========== PRINT / PDF ==========
     function generateTimesheet() {
       const name = document.getElementById("driverName").value || "—";
-      const emp = document.getElementById("empNum").value || "";
+  
       const date = document.getElementById("shiftDate").value || "";
       const truck = document.getElementById("truckNum").value || "";
       const trailer = document.getElementById("trailerNum").value || "";
@@ -558,7 +558,7 @@ function deleteCustomLocation(loc) {
           <table style="width:100%; border-collapse: collapse; margin-bottom: 6px;">
             <tr>
               <td><strong>NAME</strong> ${name}</td>
-              <td><strong>EMP #</strong> ${emp}</td>
+              
               <td><strong>DATE</strong> ${date}</td>
               <td><strong>TRUCK #</strong> ${truck}</td>
               <td><strong>TRAILER #</strong> ${trailer}</td>
