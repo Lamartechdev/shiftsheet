@@ -679,6 +679,7 @@ function addStop() {
       const printWin = window.open("", "_blank");
       printWin.document.write(`<!DOCTYPE html><html><head><title>Elite Fuels Timesheet</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>
         <style>
           body{margin:0; background:#525659;}
           .preview-toolbar{
@@ -701,9 +702,30 @@ function addStop() {
         </style></head><body>
        <div class="preview-toolbar">
           <button onclick="window.print()">Print / Save as PDF</button>
-          <a href="${mailtoLink}" style="display:inline-block; background:#276749; color:white; border:none; padding:12px 24px; border-radius:8px; font-size:1rem; font-weight:600; text-decoration:none; margin-left:8px;">Email Timesheet</a>
+          <button id="emailBtn" onclick="downloadThenEmail()" style="background:#276749; color:white; border:none; padding:12px 24px; border-radius:8px; font-size:1rem; font-weight:600; margin-left:8px;">Email Timesheet</button>
         </div>
-        <div class="sheet-wrap">${html}</div>
+        <script>
+          function downloadThenEmail() {
+            const btn = document.getElementById("emailBtn");
+            btn.textContent = "Preparing PDF...";
+            btn.disabled = true;
+            const element = document.getElementById("sheetContent");
+            html2pdf().from(element).set({
+              filename: "timesheet-${date}.pdf",
+              margin: 10,
+              jsPDF: { unit: "mm", format: "letter", orientation: "portrait" }
+            }).save().then(() => {
+              btn.textContent = "Email Timesheet";
+              btn.disabled = false;
+              window.location.href = "${mailtoLink}";
+            }).catch(() => {
+              btn.textContent = "Email Timesheet";
+              btn.disabled = false;
+              alert("PDF download failed. Try Print / Save as PDF instead, then attach manually.");
+            });
+          }
+        <\/script>
+        <div class="sheet-wrap" id="sheetContent">${html}</div>
         </body></html>`);
       printWin.document.close();
       printWin.focus();
