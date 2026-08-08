@@ -310,6 +310,63 @@ let knownLocations = [...baseLocations, ...loadCustomLocations(), "Other"];
     let stops = [];
     let nextId = 1;
 
+    const STORAGE_KEY = "shiftSheetProgress";
+
+    function saveProgress() {
+      const data = {
+        driverName: document.getElementById("driverName").value,
+        shiftDate: document.getElementById("shiftDate").value,
+        truckNum: document.getElementById("truckNum").value,
+        trailerNum: document.getElementById("trailerNum").value,
+        shiftType: document.querySelector('input[name="shiftType"]:checked')?.value || "NIGHT",
+        stateType: document.querySelector('input[name="stateType"]:checked')?.value || "CA",
+        stops: stops,
+        nextId: nextId
+      };
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      } catch (e) {
+        console.warn("Auto-save failed:", e);
+      }
+    }
+
+    function loadProgress() {
+      let saved;
+      try {
+        saved = localStorage.getItem(STORAGE_KEY);
+      } catch (e) {
+        return false;
+      }
+      if (!saved) return false;
+      try {
+        const data = JSON.parse(saved);
+        document.getElementById("driverName").value = data.driverName || "";
+        if (data.shiftDate) document.getElementById("shiftDate").value = data.shiftDate;
+        document.getElementById("truckNum").value = data.truckNum || "";
+        document.getElementById("trailerNum").value = data.trailerNum || "";
+        if (data.shiftType) {
+          const r = document.querySelector(`input[name="shiftType"][value="${data.shiftType}"]`);
+          if (r) r.checked = true;
+        }
+        if (data.stateType) {
+          const r = document.querySelector(`input[name="stateType"][value="${data.stateType}"]`);
+          if (r) r.checked = true;
+        }
+        stops = Array.isArray(data.stops) ? data.stops : [];
+        nextId = data.nextId || (stops.length ? Math.max(...stops.map(s => s.id)) + 1 : 1);
+        return stops.length > 0;
+      } catch (e) {
+        console.warn("Could not restore saved progress:", e);
+        return false;
+      }
+    }
+
+    function clearProgress() {
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch (e) {}
+    }
+
     // ========== HELPERS ==========
     function minutesToHHMM(totalMinutes) {
       if (isNaN(totalMinutes) || totalMinutes < 0) return "00:00";
@@ -500,6 +557,7 @@ function addStop() {
       };
       stops.push(newStop);
       renderAll();
+      saveProgress();
     }
     function removeStop(id) {
       stops = stops.filter(s => s.id !== id);
@@ -508,14 +566,15 @@ function addStop() {
         if (!stops[i].odometer) stops[i].odometer = stops[i - 1].odometer || "";
       }
       renderAll();
+      saveProgress();
     }
 
-    function updateStop(id, field, value) {
+ function updateStop(id, field, value) {
       const stop = stops.find(s => s.id === id);
       if (!stop) return;
       stop[field] = value;
+      saveProgress();
     }
-
     function recalculate(id) {
       const stop = stops.find(s => s.id === id);
       if (!stop) return;
@@ -524,6 +583,7 @@ function addStop() {
       stop.durationFormatted = mins !== null ? minutesToHHMM(mins) : "—";
       document.getElementById(`duration_${id}`).textContent = `Total Time: ${stop.durationFormatted}`;
       updateTotals();
+      saveProgress();
     }
 
    function updateNextOdometer(index) {
@@ -533,6 +593,7 @@ function addStop() {
       }
       renderAll(); // re-render to show updated pre-fills
       updateTotals();
+      saveProgress();
     }
    function updateTotals() {
       let totalMins = 0;
@@ -729,17 +790,31 @@ function addStop() {
         </body></html>`);
       printWin.document.close();
       printWin.focus();
+      clearProgress();
     }
     // ========== INIT ==========
     document.getElementById("addStopBtn").addEventListener("click", addStop);
     document.getElementById("generateBtn").addEventListener("click", generateTimesheet);
 
-    // Set today's date
-    const today = new Date();
-    document.getElementById("shiftDate").value = today.toISOString().split("T")[0];
+    // Auto-save header fields whenever they change
+    ["driverName", "shiftDate", "truckNum", "trailerNum"].forEach(id => {
+      document.getElementById(id).addEventListener("input", saveProgress);
+    });
+    document.querySelectorAll('input[name="shiftType"], input[name="stateType"]').forEach(el => {
+      el.addEventListener("change", saveProgress);
+    });
 
-    // Start with one stop
-    addStop();
+    // Try to restore a previous in-progress shift; otherwise start fresh
+    const restored = loadProgress();
+    if (restored) {
+      renderAll();
+    } else {
+      // Set today's date
+      const today = new Date();
+      document.getElementById("shiftDate").value = today.toISOString().split("T")[0];
+      // Start with one stop
+      addStop();
+    }
   </script>
 </body>
 </html>
