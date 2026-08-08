@@ -534,13 +534,12 @@ function addStop() {
       renderAll(); // re-render to show updated pre-fills
       updateTotals();
     }
-    function updateTotals() {
+   function updateTotals() {
       let totalMins = 0;
-      stops.forEach(s => {
-        if (s.durationMinutes !== null) totalMins += s.durationMinutes;
-      });
+      if (stops.length > 0 && stops[0].arrived && stops[stops.length - 1].left) {
+        totalMins = calcDuration(stops[0].arrived, stops[stops.length - 1].left) || 0;
+      }
       document.getElementById("totalTimeDisplay").textContent = minutesToHHMM(totalMins);
-
       let startOdo = null, endOdo = null;
       stops.forEach(s => {
         const o = parseInt(s.odometer, 10);
@@ -570,9 +569,12 @@ function addStop() {
       const stateType = document.querySelector('input[name="stateType"]:checked')?.value || "CA";
       const mailtoLink = `mailto:Billing@elitefueltrans.com?subject=${encodeURIComponent(`Timesheet - ${name} - ${date}`)}`;
       let totalMins = 0;
+      if (stops.length > 0 && stops[0].arrived && stops[stops.length - 1].left) {
+        totalMins = calcDuration(stops[0].arrived, stops[stops.length - 1].left) || 0;
+      }
       let startOdo = null, endOdo = null;
       stops.forEach(s => {
-        if (s.durationMinutes !== null) totalMins += s.durationMinutes;
+    
         const o = parseInt(s.odometer, 10);
         if (!isNaN(o)) {
           if (startOdo === null) startOdo = o;
