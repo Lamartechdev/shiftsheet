@@ -645,9 +645,13 @@ function addStop() {
       const totalMiles = (startOdo !== null && endOdo !== null) ? endOdo - startOdo : 0;
 
       // Build printable HTML that approximates the company form
- let rows = "";
+      // Rows sharing the same invoice # stay grouped together (no gap).
+      // A blank spacer row is inserted whenever the invoice # changes or is blank
+      // (covers pre-trip, post-trip, waiting, and fuel stops between loads).
+      let rows = "";
       let totalFuelGal = 0;
       let totalDefGal = 0;
+      let prevInvoice = null;
       stops.forEach((s, i) => {
         let activityCell = s.activity || "";
         if (s.activity === "Fuel") {
@@ -660,6 +664,14 @@ function addStop() {
           if (s.defGallons) parts.push(`${s.defGallons} gal DEF`);
           if (parts.length) activityCell += ` (${parts.join(", ")})`;
         }
+
+        const currInvoice = (s.invoice || "").trim();
+        const isNewGroup = i > 0 && (currInvoice === "" || currInvoice !== prevInvoice);
+
+        if (isNewGroup) {
+          rows += `<tr><td colspan="7" style="border:none; padding:5px 0;"></td></tr>`;
+        }
+
         rows += `
           <tr>
             <td>${s.location || ""}</td>
@@ -670,6 +682,8 @@ function addStop() {
             <td>${activityCell}</td>
             <td>${s.odometer || ""}</td>
           </tr>`;
+
+        prevInvoice = currInvoice;
       });
 
       const html = `
