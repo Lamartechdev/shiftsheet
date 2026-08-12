@@ -678,13 +678,13 @@ function addStop() {
 
         rows += `
           <tr>
-            <td style="padding:9px 8px;">${s.location || ""}</td>
-            <td style="padding:9px 8px;">${s.invoice || ""}</td>
-            <td style="padding:9px 8px;">${s.arrived || ""}</td>
-            <td style="padding:9px 8px;">${s.left || ""}</td>
-            <td style="padding:9px 8px;">${s.durationFormatted || ""}</td>
-            <td style="padding:9px 8px;">${activityCell}</td>
-            <td style="padding:9px 8px;">${s.odometer || ""}</td>
+            <td>${s.location || ""}</td>
+            <td>${s.invoice || ""}</td>
+            <td>${s.arrived || ""}</td>
+            <td>${s.left || ""}</td>
+            <td>${s.durationFormatted || ""}</td>
+            <td>${activityCell}</td>
+            <td>${s.odometer || ""}</td>
           </tr>`;
 
         prevInvoice = currInvoice;
@@ -711,16 +711,16 @@ function addStop() {
               <td><strong>${stateType}</strong></td>
             </tr>
           </table>
-          <table style="width:100%; table-layout: fixed; border-collapse: collapse; border: 1px solid #000; font-size: 15.5px; word-wrap: break-word; overflow-wrap: break-word;">
+          <table style="width:100%; table-layout: fixed; border-collapse: collapse; border: 1px solid #000; font-size: 14px; word-wrap: break-word; overflow-wrap: break-word;">
             <thead>
               <tr style="background:#eee;">
-                <th style="border:1px solid #000; padding:10px 8px;">LOCATION</th>
-                <th style="border:1px solid #000; padding:10px 8px;">INVOICE #</th>
-                <th style="border:1px solid #000; padding:10px 8px;">TIME ARRIVED</th>
-                <th style="border:1px solid #000; padding:10px 8px;">TIME LEFT</th>
-                <th style="border:1px solid #000; padding:10px 8px;">TOTAL TIME</th>
-                <th style="border:1px solid #000; padding:10px 8px;">COMMENTS</th>
-                <th style="border:1px solid #000; padding:10px 8px;">ODOMETER MILES</th>
+                <th style="border:1px solid #000; padding:6px;">LOCATION</th>
+                <th style="border:1px solid #000; padding:6px;">INVOICE #</th>
+                <th style="border:1px solid #000; padding:6px;">TIME ARRIVED</th>
+                <th style="border:1px solid #000; padding:6px;">TIME LEFT</th>
+                <th style="border:1px solid #000; padding:6px;">TOTAL TIME</th>
+                <th style="border:1px solid #000; padding:6px;">COMMENTS</th>
+                <th style="border:1px solid #000; padding:6px;">ODOMETER MILES</th>
               </tr>
             </thead>
             <tbody>
