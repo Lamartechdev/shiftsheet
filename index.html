@@ -772,7 +772,7 @@ function addStop() {
             font-weight:600; cursor:pointer;
           }
           .preview-toolbar button:active{ background:#2c5282; }
-          .sheet-wrap{ background:white; margin:16px auto; padding:20px; max-width:800px; }
+          .sheet-wrap{ background:white; margin:16px auto; padding:20px; width:800px; }
           @media print{
             .preview-toolbar{ display:none; }
             body{ background:white; }
@@ -781,9 +781,28 @@ function addStop() {
         </style></head><body>
        <div class="preview-toolbar">
           <button onclick="window.print()">Print / Save as PDF</button>
+          <button id="downloadBtn" onclick="downloadPdf()" style="background:#c05621; color:white; border:none; padding:12px 24px; border-radius:8px; font-size:1rem; font-weight:600; margin-left:8px;">Download PDF</button>
           <button id="emailBtn" onclick="downloadThenEmail()" style="background:#276749; color:white; border:none; padding:12px 24px; border-radius:8px; font-size:1rem; font-weight:600; margin-left:8px;">Email Timesheet</button>
         </div>
         <script>
+          function downloadPdf() {
+            const btn = document.getElementById("downloadBtn");
+            btn.textContent = "Preparing PDF...";
+            btn.disabled = true;
+            const element = document.getElementById("sheetContent");
+            html2pdf().from(element).set({
+              filename: "timesheet-${date}-${timeStamp}.pdf",
+              margin: 10,
+              jsPDF: { unit: "mm", format: "letter", orientation: "portrait" }
+            }).save().then(() => {
+              btn.textContent = "Download PDF";
+              btn.disabled = false;
+            }).catch(() => {
+              btn.textContent = "Download PDF";
+              btn.disabled = false;
+              alert("PDF download failed. Try Print / Save as PDF instead.");
+            });
+          }
           function downloadThenEmail() {
             const btn = document.getElementById("emailBtn");
             btn.textContent = "Preparing PDF...";
