@@ -189,6 +189,35 @@
           style="background:#2b6cb0; color:white; border:none; padding:12px 32px; border-radius:8px; font-size:1rem; font-weight:600;">Enter</button>
   <p id="passcodeError" style="color:#feb2b2; margin-top:12px; display:none;">Incorrect code, try again.</p>
 </div>
+
+  <div id="gettingStartedOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:9998; overflow-y:auto; padding:24px 20px 100px 20px;">
+    <h2 style="color:#1a365d; text-align:center; margin-bottom:6px;">Getting Started with ShiftSheet</h2>
+    <p style="color:#718096; text-align:center; margin-bottom:24px; font-size:0.95rem;">Add it to your home screen so it opens like an app.</p>
+
+    <h3 style="color:#1a365d; border-bottom:1px solid #cbd5e0; padding-bottom:8px; margin-bottom:12px;">iPhone (Safari)</h3>
+    <ol style="margin-bottom:24px; padding-left:20px; color:#2d3748; line-height:1.6;">
+      <li>Open the ShiftSheet link in Safari.</li>
+      <li>Tap the Share icon (square with an arrow pointing up) at the bottom of the screen.</li>
+      <li>Scroll down and tap "Add to Home Screen."</li>
+      <li>Tap "Add" in the top right corner.</li>
+    </ol>
+
+    <h3 style="color:#1a365d; border-bottom:1px solid #cbd5e0; padding-bottom:8px; margin-bottom:12px;">Android (Chrome)</h3>
+    <ol style="margin-bottom:24px; padding-left:20px; color:#2d3748; line-height:1.6;">
+      <li>Open the ShiftSheet link in Chrome.</li>
+      <li>Tap the three-dot menu icon in the top right corner.</li>
+      <li>Tap "Add to Home screen."</li>
+      <li>Tap "Add," then "Add" again to confirm.</li>
+    </ol>
+
+    <p style="color:#718096; font-style:italic; text-align:center; margin-bottom:24px;">That's it — ShiftSheet will now show up as an icon on your home screen, just like any other app.</p>
+
+    <div style="position:fixed; bottom:0; left:0; width:100%; background:white; padding:16px 20px; box-shadow:0 -2px 8px rgba(0,0,0,0.1); text-align:right;">
+      <button type="button" onclick="continueToApp()"
+              style="background:#2b6cb0; color:white; border:none; padding:14px 32px; border-radius:8px; font-size:1rem; font-weight:600;">Continue</button>
+    </div>
+  </div>
+
   <h1>ShiftSheet</h1>
   <p class="subtitle">Elite Fuels Transportation Inc. – Driver Timesheet</p>
 
@@ -964,9 +993,13 @@ function addStop() {
       if (entered === SHIFT_SHEET_PASSCODE) {
         localStorage.setItem("shiftSheet_unlocked", "true");
         document.getElementById("passcodeOverlay").style.display = "none";
+        document.getElementById("gettingStartedOverlay").style.display = "block";
       } else {
         document.getElementById("passcodeError").style.display = "block";
       }
+    }
+    function continueToApp() {
+      document.getElementById("gettingStartedOverlay").style.display = "none";
     }
     if (localStorage.getItem("shiftSheet_unlocked") === "true") {
       document.getElementById("passcodeOverlay").style.display = "none";
