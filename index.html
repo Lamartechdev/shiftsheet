@@ -287,6 +287,7 @@
     </div>
     <button type="button" class="btn btn-success" id="generateBtn">Generate / Print Timesheet</button>
     <button type="button" class="btn btn-secondary no-print" id="clearAllBtn" style="background:#f5f5f5; color:#c53030; border:1px solid #ddd; margin-top:8px;">Clear All / Start New Shift</button>
+    <button type="button" class="btn btn-secondary no-print" id="resetAccessBtn" style="background:#f5f5f5; color:#718096; border:1px solid #ddd; margin-top:8px; font-size:0.8rem;">Log Out</button>
   </div>
 
   <!-- PRINT VIEW (hidden until needed) -->
@@ -965,6 +966,7 @@ function addStop() {
     document.getElementById("addStopBtn").addEventListener("click", addStop);
     document.getElementById("generateBtn").addEventListener("click", generateTimesheet);
     document.getElementById("clearAllBtn").addEventListener("click", clearAllShift);
+    document.getElementById("resetAccessBtn").addEventListener("click", resetAccess);
 
     // Auto-save header fields whenever they change
     ["driverName", "shiftDate", "truckNum", "trailerNum"].forEach(id => {
@@ -1000,6 +1002,12 @@ function addStop() {
     }
     function continueToApp() {
       document.getElementById("gettingStartedOverlay").style.display = "none";
+    }
+    function resetAccess() {
+      const confirmed = window.confirm("Log out and require the access code again next time?");
+      if (!confirmed) return;
+      localStorage.removeItem("shiftSheet_unlocked");
+      location.reload();
     }
     if (localStorage.getItem("shiftSheet_unlocked") === "true") {
       document.getElementById("passcodeOverlay").style.display = "none";
