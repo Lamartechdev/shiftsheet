@@ -892,18 +892,58 @@ function addStop() {
           <button id="emailBtn" onclick="downloadThenEmail()" style="background:#276749; color:white; border:none; padding:12px 24px; border-radius:8px; font-size:1rem; font-weight:600; margin-left:8px;">Email Timesheet</button>
         </div>
         <script>
+          function generateTimesheetPdf() {
+            const element = document.getElementById("sheetContent");
+            const fullWidth = element.scrollWidth;
+            return html2canvas(element, {
+              scale: 2,
+              windowWidth: fullWidth,
+              width: fullWidth,
+              useCORS: true
+            }).then((canvas) => {
+              const jsPDFCtor = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
+              const pdf = new jsPDFCtor({ unit: "mm", format: "letter", orientation: "portrait" });
+              const pageWidth = pdf.internal.pageSize.getWidth();
+              const pageHeight = pdf.internal.pageSize.getHeight();
+              const margin = 10;
+              const usableWidth = pageWidth - (margin * 2);
+              const usableHeight = pageHeight - (margin * 2);
+              const imgWidth = usableWidth;
+              const imgHeight = (canvas.height * imgWidth) / canvas.width;
+              const imgData = canvas.toDataURL("image/jpeg", 0.95);
+
+              if (imgHeight <= usableHeight) {
+                pdf.addImage(imgData, "JPEG", margin, margin, imgWidth, imgHeight);
+              } else {
+                // Content taller than one page: slice across multiple pages
+                const pageCanvasHeightPx = (usableHeight * canvas.width) / imgWidth;
+                let renderedHeightPx = 0;
+                let firstPage = true;
+                while (renderedHeightPx < canvas.height) {
+                  const sliceHeightPx = Math.min(pageCanvasHeightPx, canvas.height - renderedHeightPx);
+                  const sliceCanvas = document.createElement("canvas");
+                  sliceCanvas.width = canvas.width;
+                  sliceCanvas.height = sliceHeightPx;
+                  const ctx = sliceCanvas.getContext("2d");
+                  ctx.drawImage(canvas, 0, renderedHeightPx, canvas.width, sliceHeightPx, 0, 0, canvas.width, sliceHeightPx);
+                  const sliceData = sliceCanvas.toDataURL("image/jpeg", 0.95);
+                  const sliceHeightMM = (sliceHeightPx * imgWidth) / canvas.width;
+                  if (!firstPage) pdf.addPage();
+                  pdf.addImage(sliceData, "JPEG", margin, margin, imgWidth, sliceHeightMM);
+                  renderedHeightPx += sliceHeightPx;
+                  firstPage = false;
+                }
+              }
+              return pdf;
+            });
+          }
+
           function downloadPdf() {
             const btn = document.getElementById("downloadBtn");
             btn.textContent = "Preparing PDF...";
             btn.disabled = true;
-            const element = document.getElementById("sheetContent");
-            const fullWidth = element.scrollWidth;
-            html2pdf().from(element).set({
-              filename: "timesheet-${date}-${timeStamp}.pdf",
-              margin: 10,
-              html2canvas: { scale: 2, windowWidth: fullWidth, width: fullWidth },
-              jsPDF: { unit: "mm", format: "letter", orientation: "portrait" }
-            }).save().then(() => {
+            generateTimesheetPdf().then((pdf) => {
+              pdf.save("timesheet-${date}-${timeStamp}.pdf");
               btn.textContent = "Download PDF";
               btn.disabled = false;
             }).catch(() => {
@@ -916,14 +956,8 @@ function addStop() {
             const btn = document.getElementById("emailBtn");
             btn.textContent = "Preparing PDF...";
             btn.disabled = true;
-            const element = document.getElementById("sheetContent");
-            const fullWidth = element.scrollWidth;
-            html2pdf().from(element).set({
-              filename: "timesheet-${date}-${timeStamp}.pdf",
-              margin: 10,
-              html2canvas: { scale: 2, windowWidth: fullWidth, width: fullWidth },
-              jsPDF: { unit: "mm", format: "letter", orientation: "portrait" }
-            }).save().then(() => {
+            generateTimesheetPdf().then((pdf) => {
+              pdf.save("timesheet-${date}-${timeStamp}.pdf");
               btn.textContent = "Email Timesheet";
               btn.disabled = false;
               window.location.href = "${mailtoLink}";
@@ -934,6 +968,7 @@ function addStop() {
             });
           }
         <\/script>
+
         <div class="sheet-wrap" id="sheetContent">${html}</div>
         </body></html>`);
       printWin.document.close();
