@@ -892,49 +892,66 @@ function addStop() {
           <button id="emailBtn" onclick="downloadThenEmail()" style="background:#276749; color:white; border:none; padding:12px 24px; border-radius:8px; font-size:1rem; font-weight:600; margin-left:8px;">Email Timesheet</button>
         </div>
         <script>
-          function generateTimesheetPdf() {
-            const element = document.getElementById("sheetContent");
-            const fullWidth = element.scrollWidth;
-            return html2canvas(element, {
-              scale: 2,
-              windowWidth: fullWidth,
-              width: fullWidth,
-              useCORS: true
-            }).then((canvas) => {
-              const jsPDFCtor = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
-              const pdf = new jsPDFCtor({ unit: "mm", format: "letter", orientation: "portrait" });
-              const pageWidth = pdf.internal.pageSize.getWidth();
-              const pageHeight = pdf.internal.pageSize.getHeight();
-              const margin = 10;
-              const usableWidth = pageWidth - (margin * 2);
-              const usableHeight = pageHeight - (margin * 2);
-              const imgWidth = usableWidth;
-              const imgHeight = (canvas.height * imgWidth) / canvas.width;
-              const imgData = canvas.toDataURL("image/jpeg", 0.95);
+          function findJsPDFCtor() {
+            if (window.jspdf && window.jspdf.jsPDF) return window.jspdf.jsPDF;
+            if (window.jsPDF) return window.jsPDF;
+            if (typeof html2pdf !== "undefined" && html2pdf.jsPDF) return html2pdf.jsPDF;
+            return null;
+          }
 
-              if (imgHeight <= usableHeight) {
-                pdf.addImage(imgData, "JPEG", margin, margin, imgWidth, imgHeight);
-              } else {
-                // Content taller than one page: slice across multiple pages
-                const pageCanvasHeightPx = (usableHeight * canvas.width) / imgWidth;
-                let renderedHeightPx = 0;
-                let firstPage = true;
-                while (renderedHeightPx < canvas.height) {
-                  const sliceHeightPx = Math.min(pageCanvasHeightPx, canvas.height - renderedHeightPx);
-                  const sliceCanvas = document.createElement("canvas");
-                  sliceCanvas.width = canvas.width;
-                  sliceCanvas.height = sliceHeightPx;
-                  const ctx = sliceCanvas.getContext("2d");
-                  ctx.drawImage(canvas, 0, renderedHeightPx, canvas.width, sliceHeightPx, 0, 0, canvas.width, sliceHeightPx);
-                  const sliceData = sliceCanvas.toDataURL("image/jpeg", 0.95);
-                  const sliceHeightMM = (sliceHeightPx * imgWidth) / canvas.width;
-                  if (!firstPage) pdf.addPage();
-                  pdf.addImage(sliceData, "JPEG", margin, margin, imgWidth, sliceHeightMM);
-                  renderedHeightPx += sliceHeightPx;
-                  firstPage = false;
-                }
+          function generateTimesheetPdf() {
+            return new Promise((resolve, reject) => {
+              try {
+                const element = document.getElementById("sheetContent");
+                const fullWidth = element.scrollWidth;
+                const opt = {
+                  html2canvas: { scale: 2, windowWidth: fullWidth, width: fullWidth, useCORS: true, scrollX: 0, scrollY: 0 },
+                  jsPDF: { unit: "mm", format: "letter", orientation: "portrait" }
+                };
+                // Use html2pdf's own worker chain to get the canvas — this only depends on
+                // the confirmed-available "html2pdf" global, not on separate html2canvas/jsPDF globals.
+                html2pdf().set(opt).from(element).toCanvas().get("canvas").then((canvas) => {
+                  const jsPDFCtor = findJsPDFCtor();
+                  if (!jsPDFCtor) {
+                    reject(new Error("jsPDF constructor not found"));
+                    return;
+                  }
+                  const pdf = new jsPDFCtor({ unit: "mm", format: "letter", orientation: "portrait" });
+                  const pageWidth = pdf.internal.pageSize.getWidth();
+                  const pageHeight = pdf.internal.pageSize.getHeight();
+                  const margin = 10;
+                  const usableWidth = pageWidth - (margin * 2);
+                  const usableHeight = pageHeight - (margin * 2);
+                  const imgWidth = usableWidth;
+                  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                  const imgData = canvas.toDataURL("image/jpeg", 0.95);
+
+                  if (imgHeight <= usableHeight) {
+                    pdf.addImage(imgData, "JPEG", margin, margin, imgWidth, imgHeight);
+                  } else {
+                    const pageCanvasHeightPx = (usableHeight * canvas.width) / imgWidth;
+                    let renderedHeightPx = 0;
+                    let firstPage = true;
+                    while (renderedHeightPx < canvas.height) {
+                      const sliceHeightPx = Math.min(pageCanvasHeightPx, canvas.height - renderedHeightPx);
+                      const sliceCanvas = document.createElement("canvas");
+                      sliceCanvas.width = canvas.width;
+                      sliceCanvas.height = sliceHeightPx;
+                      const ctx = sliceCanvas.getContext("2d");
+                      ctx.drawImage(canvas, 0, renderedHeightPx, canvas.width, sliceHeightPx, 0, 0, canvas.width, sliceHeightPx);
+                      const sliceData = sliceCanvas.toDataURL("image/jpeg", 0.95);
+                      const sliceHeightMM = (sliceHeightPx * imgWidth) / canvas.width;
+                      if (!firstPage) pdf.addPage();
+                      pdf.addImage(sliceData, "JPEG", margin, margin, imgWidth, sliceHeightMM);
+                      renderedHeightPx += sliceHeightPx;
+                      firstPage = false;
+                    }
+                  }
+                  resolve(pdf);
+                }).catch(reject);
+              } catch (err) {
+                reject(err);
               }
-              return pdf;
             });
           }
 
@@ -946,10 +963,11 @@ function addStop() {
               pdf.save("timesheet-${date}-${timeStamp}.pdf");
               btn.textContent = "Download PDF";
               btn.disabled = false;
-            }).catch(() => {
+            }).catch((err) => {
+              console.error("ShiftSheet PDF generation error:", err);
               btn.textContent = "Download PDF";
               btn.disabled = false;
-              alert("PDF download failed. Try Print / Save as PDF instead.");
+              alert("PDF download failed" + (err && err.message ? (": " + err.message) : "") + ". Try Print / Save as PDF instead.");
             });
           }
           function downloadThenEmail() {
@@ -961,10 +979,11 @@ function addStop() {
               btn.textContent = "Email Timesheet";
               btn.disabled = false;
               window.location.href = "${mailtoLink}";
-            }).catch(() => {
+            }).catch((err) => {
+              console.error("ShiftSheet PDF generation error:", err);
               btn.textContent = "Email Timesheet";
               btn.disabled = false;
-              alert("PDF download failed. Try Print / Save as PDF instead, then attach manually.");
+              alert("PDF download failed" + (err && err.message ? (": " + err.message) : "") + ". Try Print / Save as PDF instead, then attach manually.");
             });
           }
         <\/script>
