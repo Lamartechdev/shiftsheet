@@ -897,9 +897,11 @@ function addStop() {
             btn.textContent = "Preparing PDF...";
             btn.disabled = true;
             const element = document.getElementById("sheetContent");
+            const fullWidth = element.scrollWidth;
             html2pdf().from(element).set({
               filename: "timesheet-${date}-${timeStamp}.pdf",
               margin: 10,
+              html2canvas: { scale: 2, windowWidth: fullWidth, width: fullWidth },
               jsPDF: { unit: "mm", format: "letter", orientation: "portrait" }
             }).save().then(() => {
               btn.textContent = "Download PDF";
@@ -915,9 +917,11 @@ function addStop() {
             btn.textContent = "Preparing PDF...";
             btn.disabled = true;
             const element = document.getElementById("sheetContent");
+            const fullWidth = element.scrollWidth;
             html2pdf().from(element).set({
               filename: "timesheet-${date}-${timeStamp}.pdf",
               margin: 10,
+              html2canvas: { scale: 2, windowWidth: fullWidth, width: fullWidth },
               jsPDF: { unit: "mm", format: "letter", orientation: "portrait" }
             }).save().then(() => {
               btn.textContent = "Email Timesheet";
