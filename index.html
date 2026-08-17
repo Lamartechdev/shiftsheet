@@ -182,7 +182,7 @@
 <body>
   <div id="passcodeOverlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#1a365d; z-index:9999; display:flex; align-items:center; justify-content:center; flex-direction:column; padding:20px; text-align:center;">
   <h2 style="color:white; margin-bottom:4px; font-size:1.8rem;">ShiftSheet</h2>
-  <p style="color:#a0aec0; margin-bottom:16px; font-size:0.9rem; letter-spacing:0.3px;">Elite Fuels Transportation Inc.</p>
+  <p style="color:#a0aec0; margin-bottom:16px; font-size:0.9rem; letter-spacing:0.3px;">Driver Timesheet</p>
   <p style="color:#cbd5e0; margin-bottom:16px;">Enter access code to continue</p>
   <input type="text" id="passcodeInput" placeholder="Access code" autocapitalize="off"
          style="padding:12px; font-size:1.1rem; border-radius:8px; border:none; width:80%; max-width:300px; text-align:center; margin-bottom:12px;">
@@ -892,44 +892,62 @@ function addStop() {
           <button id="emailBtn" onclick="downloadThenEmail()" style="background:#276749; color:white; border:none; padding:12px 24px; border-radius:8px; font-size:1rem; font-weight:600; margin-left:8px;">Email Timesheet</button>
         </div>
         <script>
+          function generateTimesheetPdf() {
+            return new Promise((resolve, reject) => {
+              try {
+                const element = document.getElementById("sheetContent");
+                const fullWidth = element.scrollWidth;
+                const opt = {
+                  margin: 10,
+                  html2canvas: { scale: 2, windowWidth: fullWidth, width: fullWidth, useCORS: true, scrollX: 0, scrollY: 0 },
+                  jsPDF: { unit: "mm", format: "letter", orientation: "portrait" },
+                  pagebreak: { mode: ["avoid-all", "css", "legacy"] }
+                };
+                // Use html2pdf's own documented worker chain end-to-end (toPdf), and pull the
+                // jsPDF instance IT already built internally via get("pdf") — we never touch
+                // jsPDF/html2canvas as separate globals, avoiding the "constructor not found" issue.
+                html2pdf().set(opt).from(element).toPdf().get("pdf").then((pdf) => {
+                  resolve(pdf);
+                }).catch(reject);
+              } catch (err) {
+                reject(err);
+              }
+            });
+          }
+
           function downloadPdf() {
             const btn = document.getElementById("downloadBtn");
             btn.textContent = "Preparing PDF...";
             btn.disabled = true;
-            const element = document.getElementById("sheetContent");
-            html2pdf().from(element).set({
-              filename: "timesheet-${date}-${timeStamp}.pdf",
-              margin: 10,
-              jsPDF: { unit: "mm", format: "letter", orientation: "portrait" }
-            }).save().then(() => {
+            generateTimesheetPdf().then((pdf) => {
+              pdf.save("timesheet-${date}-${timeStamp}.pdf");
               btn.textContent = "Download PDF";
               btn.disabled = false;
-            }).catch(() => {
+            }).catch((err) => {
+              console.error("ShiftSheet PDF generation error:", err);
               btn.textContent = "Download PDF";
               btn.disabled = false;
-              alert("PDF download failed. Try Print / Save as PDF instead.");
+              alert("PDF download failed" + (err && err.message ? (": " + err.message) : "") + ". Try Print / Save as PDF instead.");
             });
           }
           function downloadThenEmail() {
             const btn = document.getElementById("emailBtn");
             btn.textContent = "Preparing PDF...";
             btn.disabled = true;
-            const element = document.getElementById("sheetContent");
-            html2pdf().from(element).set({
-              filename: "timesheet-${date}-${timeStamp}.pdf",
-              margin: 10,
-              jsPDF: { unit: "mm", format: "letter", orientation: "portrait" }
-            }).save().then(() => {
+            generateTimesheetPdf().then((pdf) => {
+              pdf.save("timesheet-${date}-${timeStamp}.pdf");
               btn.textContent = "Email Timesheet";
               btn.disabled = false;
               window.location.href = "${mailtoLink}";
-            }).catch(() => {
+            }).catch((err) => {
+              console.error("ShiftSheet PDF generation error:", err);
               btn.textContent = "Email Timesheet";
               btn.disabled = false;
-              alert("PDF download failed. Try Print / Save as PDF instead, then attach manually.");
+              alert("PDF download failed" + (err && err.message ? (": " + err.message) : "") + ". Try Print / Save as PDF instead, then attach manually.");
             });
           }
         <\/script>
+
         <div class="sheet-wrap" id="sheetContent">${html}</div>
         </body></html>`);
       printWin.document.close();
