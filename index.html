@@ -170,6 +170,33 @@
     }
     .hidden { display: none !important; }
     .other-input { margin-top: -6px; }
+    .loc-combo { position: relative; }
+    .loc-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      z-index: 50;
+      background: #fff;
+      border: 1px solid #cbd5e0;
+      border-radius: 6px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+      max-height: 220px;
+      overflow-y: auto;
+      margin-top: -6px;
+      margin-bottom: 10px;
+    }
+    .loc-option {
+      padding: 10px 12px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      border-bottom: 1px solid #edf2f7;
+    }
+    .loc-option:last-child { border-bottom: none; }
+    .loc-option:hover, .loc-option:active { background: #ebf4ff; }
+    .loc-option-add { color: var(--accent); font-weight: 600; }
+    .loc-option-empty { color: #a0aec0; cursor: default; }
+    .loc-option-empty:hover { background: #fff; }
     /* Print styles */
     @media print {
       body { background: white; padding: 0; }
@@ -347,14 +374,90 @@ function saveCustomLocation(loc) {
 
 let knownLocations = [...baseLocations, ...loadCustomLocations(), "Other"];
 
+// ========== SEARCHABLE LOCATION DROPDOWN ==========
+function renderLocationDropdownList(stopId, query) {
+  const dd = document.getElementById(`locDropdown_${stopId}`);
+  if (!dd) return;
+  const q = (query || "").trim().toLowerCase();
+  const options = knownLocations.filter(l => l !== "Other");
+  const matches = options
+    .filter(l => l.toLowerCase().includes(q))
+    .sort((a, b) => a.localeCompare(b));
+
+  let html = matches
+    .map(l => `<div class="loc-option" onmousedown="selectLocationOption(${stopId}, '${l.replace(/'/g, "\\'")}')">${l}</div>`)
+    .join("");
+
+  const exactMatch = options.some(l => l.toLowerCase() === q);
+  if (q && !exactMatch) {
+    const safeQuery = query.trim();
+    html += `<div class="loc-option loc-option-add" onmousedown="selectLocationOption(${stopId}, '${safeQuery.replace(/'/g, "\\'")}')">+ Add "${safeQuery}" as new location</div>`;
+  }
+
+  if (!html) {
+    html = `<div class="loc-option loc-option-empty">No matches</div>`;
+  }
+
+  dd.innerHTML = html;
+}
+
+function openLocationDropdown(stopId) {
+  const input = document.getElementById(`locSearch_${stopId}`);
+  renderLocationDropdownList(stopId, input ? input.value : "");
+  const dd = document.getElementById(`locDropdown_${stopId}`);
+  if (dd) dd.classList.remove("hidden");
+}
+
+function filterLocationDropdown(stopId, query) {
+  updateStop(stopId, "location", query);
+  renderLocationDropdownList(stopId, query);
+  const dd = document.getElementById(`locDropdown_${stopId}`);
+  if (dd) dd.classList.remove("hidden");
+}
+
+function closeLocationDropdown(stopId) {
+  const dd = document.getElementById(`locDropdown_${stopId}`);
+  if (dd) dd.classList.add("hidden");
+}
+
+function selectLocationOption(stopId, value) {
+  updateStop(stopId, "location", value);
+  saveCustomLocation(value);
+  closeLocationDropdown(stopId);
+  renderAll();
+}
+
+function handleLocationBlur(stopId) {
+  // Delay so a tap on a dropdown option (onmousedown) fires before the
+  // input's blur closes the list out from under it.
+  setTimeout(() => {
+    closeLocationDropdown(stopId);
+    const stop = stops.find(s => s.id === stopId);
+    if (stop && stop.location) {
+      saveCustomLocation(stop.location);
+    }
+  }, 150);
+}
+
     const activityOptions = [
       "Pre-Trip Inspection",
       "Loading",
       "Unloading",
       "Fuel",
       "Post-Trip Inspection",
-      "Waiting"
+      "Waiting",
+      "Break"
     ];
+
+function getLocalDateString(d) {
+  // Builds a YYYY-MM-DD string from local calendar values instead of
+  // toISOString() (which converts to UTC first and can roll over to the
+  // next day in the evening for US time zones).
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 function loadCustomActivities() {
   try {
@@ -469,7 +572,6 @@ let knownActivities = [...activityOptions, ...loadCustomActivities(), "Other"];
     function renderStop(stop, index) {
       const isFirst = index === 0;
       const locationValue = stop.location || "";
-      const isOtherLoc = locationValue === "Other" || (locationValue && !knownLocations.includes(locationValue));
       const activityValue = stop.activity || (isFirst ? "Pre-Trip Inspection" : "");
       const isOtherAct = activityValue === "Other" || (activityValue && !knownActivities.includes(activityValue));
 
@@ -481,15 +583,15 @@ let knownActivities = [...activityOptions, ...loadCustomActivities(), "Other"];
           </div>
 
           <label>Location</label>
-          <select onchange="updateStop(${stop.id}, 'location', this.value); toggleOther(this, 'locOther_${stop.id}')">
-            <option value="">— Select —</option>
-       ${[...knownLocations].sort((a, b) => a === "Other" ? 1 : b === "Other" ? -1 : a.localeCompare(b)).map(l => `<option value="${l}" ${locationValue === l || (isOtherLoc && l === "Other") ? "selected" : ""}>${l}</option>`).join("")}
-          </select>
-          <input type="text" id="locOther_${stop.id}" class="other-input ${isOtherLoc ? "" : "hidden"}"
-       placeholder="Enter location"
-       value="${isOtherLoc && locationValue !== "Other" ? locationValue : ""}"
-       oninput="updateStop(${stop.id}, 'location', this.value)"
-       onblur="saveCustomLocation(this.value); renderAll();">
+          <div class="loc-combo">
+            <input type="text" id="locSearch_${stop.id}" autocomplete="off"
+                   placeholder="Search or select location"
+                   value="${locationValue === "Other" ? "" : locationValue}"
+                   oninput="filterLocationDropdown(${stop.id}, this.value)"
+                   onfocus="openLocationDropdown(${stop.id})"
+                   onblur="handleLocationBlur(${stop.id})">
+            <div id="locDropdown_${stop.id}" class="loc-dropdown hidden"></div>
+          </div>
        <button type="button" class="btn-secondary" style="margin-top:-4px; margin-bottom:10px; padding:8px; font-size:0.8rem;" onclick="openManageLocations()">Manage Saved Locations</button>
           <label>Invoice #</label>
           <input type="text" value="${stop.invoice || ""}" placeholder="Invoice / BOL number"
@@ -974,7 +1076,7 @@ function addStop() {
 
       // Reset date to today
       const today = new Date();
-      document.getElementById("shiftDate").value = today.toISOString().split("T")[0];
+      document.getElementById("shiftDate").value = getLocalDateString(today);
 
       // Clear saved in-progress shift data (does NOT touch saved locations/activities)
       clearProgress();
@@ -1003,7 +1105,7 @@ function addStop() {
     } else {
       // Set today's date
       const today = new Date();
-      document.getElementById("shiftDate").value = today.toISOString().split("T")[0];
+      document.getElementById("shiftDate").value = getLocalDateString(today);
       // Start with one stop
       addStop();
     }
