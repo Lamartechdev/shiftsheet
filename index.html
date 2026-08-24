@@ -518,12 +518,12 @@ function renderLocationDropdownList(stopId, query, showAll = false) {
   if (!showAll && safeQuery.length >= 2 && !exactMatch) {
     html += `<div class="loc-option loc-option-add" role="option"
                   data-location="${escapeHtml(safeQuery)}"
-                  onpointerdown="event.preventDefault(); selectLocationOption(${stopId}, this.dataset.location)">+ Add "${escapeHtml(safeQuery)}" as new location</div>`;
+                  onpointerdown="event.preventDefault(); selectLocationOption(${stopId}, this.dataset.location)">+ Add "${escapeHtml(safeQuery)}" to Saved Locations</div>`;
   }
 
   if (!html) {
     html = safeQuery.length === 1
-      ? `<div class="loc-option loc-option-empty">Keep typing to add a new location</div>`
+      ? `<div class="loc-option loc-option-empty">Keep typing to add to Saved Locations</div>`
       : `<div class="loc-option loc-option-empty">No matches</div>`;
   }
 
@@ -1080,7 +1080,7 @@ function addStop() {
       });
 
       const html = `
-        <div style="font-family: Arial, sans-serif; font-size: 15px; max-width: 800px; margin: 0 auto;">
+        <div class="timesheet-page" style="font-family: Arial, sans-serif; font-size: 15px; width:100%; max-width:800px; box-sizing:border-box; margin:0 auto; overflow-wrap:anywhere; word-break:break-word;">
           <div style="display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 8px;">
             <img src="${logoBase64}" style="height: 60px; width: auto;" alt="Elite Fuels Transportation Inc. logo">
             <div style="text-align: center;">
@@ -1089,7 +1089,7 @@ function addStop() {
               Phone: 951-274-0555 . Fax: 951-274-0444
             </div>
           </div>
-          <table style="width:100%; border-collapse: collapse; margin-bottom: 6px;">
+          <table class="timesheet-meta" style="width:100%; table-layout:fixed; border-collapse:collapse; margin-bottom:6px;">
             <tr>
               <td><strong>NAME</strong> ${name}</td>
               
@@ -1152,9 +1152,14 @@ function addStop() {
           html, body{
             width:100%; max-width:100%; overflow-x:hidden;
           }
-          body{margin:0; background:#525659;}
+          body{
+            margin:0; background:#525659;
+            min-height:100vh; min-height:100dvh;
+            display:flex; flex-direction:column;
+          }
           .preview-toolbar{
             position:sticky; top:0; z-index:10;
+            flex:none;
             background:#1a365d; padding:12px;
             display:flex; flex-wrap:wrap; justify-content:center; gap:8px;
             box-shadow:0 2px 6px rgba(0,0,0,0.3);
@@ -1165,21 +1170,45 @@ function addStop() {
             font-weight:600; cursor:pointer; margin:0 !important;
           }
           .preview-toolbar button:active{ background:#2c5282; }
-          .sheet-viewport{ position:relative; margin:16px auto; }
+          .sheet-viewport{ position:relative; flex:none; margin:16px auto; }
           .sheet-wrap{
             background:white; margin:0; padding:20px; width:800px;
             transform-origin:top left;
           }
+          .timesheet-page{
+            width:100%; max-width:100%; box-sizing:border-box;
+            overflow-wrap:anywhere; word-break:break-word;
+          }
+          .timesheet-page table{ max-width:100%; }
+          .timesheet-page td, .timesheet-page th{
+            overflow-wrap:anywhere; word-break:break-word;
+          }
+          .preview-closebar{
+            position:sticky; bottom:0; z-index:10;
+            flex:none; margin-top:auto;
+            display:flex; justify-content:center;
+            background:#1a365d;
+            padding:8px 12px calc(8px + env(safe-area-inset-bottom));
+            box-shadow:0 -2px 6px rgba(0,0,0,0.25);
+          }
+          .preview-closebar button{
+            width:min(100%, 320px); min-height:44px;
+            background:#4a5568; color:white; border:none;
+            padding:10px 18px; border-radius:8px; font-size:0.95rem;
+            font-weight:600; cursor:pointer;
+          }
+          .preview-closebar button:active{ background:#2d3748; }
           @media screen and (max-width:600px){
             .preview-toolbar{ padding:8px; }
             .preview-toolbar button{
-              flex:1 1 130px; padding:10px 12px; font-size:0.88rem;
+              flex:1 1 100px; padding:10px 8px; font-size:0.82rem;
             }
             .sheet-viewport{ margin:8px auto; }
           }
           @media print{
-            .preview-toolbar{ display:none; }
-            html, body{ overflow:visible; background:white; }
+            .preview-toolbar, .preview-closebar{ display:none; }
+            html, body{ overflow:visible; background:white; min-height:auto; }
+            body{ display:block; }
             .sheet-viewport{ width:auto !important; height:auto !important; margin:0; }
             .sheet-wrap{ transform:none !important; margin:0; padding:0; }
           }
@@ -1190,17 +1219,60 @@ function addStop() {
           <button id="emailBtn" onclick="downloadThenEmail()" style="background:#276749; color:white; border:none; padding:12px 24px; border-radius:8px; font-size:1rem; font-weight:600; margin-left:8px;">Email Timesheet</button>
         </div>
         <script>
+          function closePreview() {
+            if (window.opener && !window.opener.closed) {
+              try {
+                window.opener.focus();
+              } catch (err) {
+                // Continue to close the preview even if Safari will not focus the opener.
+              }
+              window.close();
+
+              // iOS Safari normally closes script-opened previews. If it does not,
+              // return through browser history as a safe fallback.
+              setTimeout(function() {
+                if (!window.closed && history.length > 1) history.back();
+              }, 200);
+              return;
+            }
+
+            if (history.length > 1) {
+              history.back();
+            } else {
+              window.close();
+            }
+          }
+
           function fitPreviewToScreen() {
             const viewport = document.getElementById("sheetViewport");
             const sheet = document.getElementById("sheetContent");
+            const toolbar = document.querySelector(".preview-toolbar");
+            const closebar = document.querySelector(".preview-closebar");
             if (!viewport || !sheet) return;
 
             sheet.style.transform = "none";
             const naturalWidth = sheet.offsetWidth;
             const naturalHeight = sheet.offsetHeight;
-            const screenWidth = document.documentElement.clientWidth || window.innerWidth;
-            const availableWidth = Math.max(1, screenWidth - 16);
-            const scale = Math.min(1, availableWidth / naturalWidth);
+            if (!naturalWidth || !naturalHeight) return;
+
+            const screenWidth = window.visualViewport
+              ? window.visualViewport.width
+              : (document.documentElement.clientWidth || window.innerWidth);
+            const screenHeight = window.visualViewport
+              ? window.visualViewport.height
+              : (document.documentElement.clientHeight || window.innerHeight);
+            const pageSpacing = screenWidth <= 600 ? 16 : 32;
+            const availableWidth = Math.max(1, screenWidth - pageSpacing);
+            const availableHeight = Math.max(
+              1,
+              screenHeight - (toolbar ? toolbar.offsetHeight : 0) -
+              (closebar ? closebar.offsetHeight : 0) - pageSpacing
+            );
+            const scale = Math.min(
+              1,
+              availableWidth / naturalWidth,
+              availableHeight / naturalHeight
+            );
 
             sheet.style.transform = "scale(" + scale + ")";
             viewport.style.width = (naturalWidth * scale) + "px";
@@ -1212,20 +1284,33 @@ function addStop() {
               let renderHost = null;
               try {
                 const source = document.getElementById("sheetContent");
+                const pdfRenderWidth = 740;
                 renderHost = document.createElement("div");
-                renderHost.style.cssText = "position:absolute;left:-10000px;top:0;width:840px;background:white;";
+                renderHost.style.cssText = "position:absolute;left:-10000px;top:0;width:740px;background:white;";
                 const element = source.cloneNode(true);
                 element.removeAttribute("id");
                 element.style.transform = "none";
                 element.style.margin = "0";
-                element.style.width = "800px";
+                element.style.padding = "0";
+                element.style.boxSizing = "border-box";
+                element.style.width = pdfRenderWidth + "px";
+                element.style.maxWidth = pdfRenderWidth + "px";
+                element.style.overflow = "hidden";
+
+                const printablePage = element.querySelector(".timesheet-page");
+                if (printablePage) {
+                  printablePage.style.width = "100%";
+                  printablePage.style.maxWidth = "100%";
+                  printablePage.style.boxSizing = "border-box";
+                }
+
                 renderHost.appendChild(element);
                 document.body.appendChild(renderHost);
-                const fullWidth = element.scrollWidth;
+                const fullWidth = pdfRenderWidth;
                 const opt = {
                   margin: 10,
-                  html2canvas: { scale: 2, windowWidth: fullWidth, width: fullWidth, useCORS: true, scrollX: 0, scrollY: 0 },
-                  jsPDF: { unit: "mm", format: "letter", orientation: "portrait" },
+                  html2canvas: { scale: 2, windowWidth: fullWidth, width: fullWidth, useCORS: true, backgroundColor: "#ffffff", scrollX: 0, scrollY: 0 },
+                  jsPDF: { unit: "mm", format: "letter", orientation: "portrait", compress: true },
                   pagebreak: { mode: ["avoid-all", "css", "legacy"] }
                 };
                 // Use html2pdf's own documented worker chain end-to-end (toPdf), and pull the
@@ -1288,6 +1373,9 @@ function addStop() {
 
         <div class="sheet-viewport" id="sheetViewport">
           <div class="sheet-wrap" id="sheetContent">${html}</div>
+        </div>
+        <div class="preview-closebar">
+          <button onclick="closePreview()" aria-label="Close preview and return to timesheet">← Back to Timesheet</button>
         </div>
         </body></html>`);
       printWin.document.close();
