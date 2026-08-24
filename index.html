@@ -1146,11 +1146,12 @@ function addStop() {
       // Open preview window (scrollable/zoomable — no auto-print)
       const printWin = window.open("", "_blank");
       printWin.document.write(`<!DOCTYPE html><html><head><title>Elite Fuels Timesheet</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
         <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>
         <style>
           html, body{
             width:100%; max-width:100%; overflow-x:hidden;
+            touch-action:pan-x pan-y pinch-zoom;
           }
           body{
             margin:0; background:#525659;
@@ -1244,6 +1245,12 @@ function addStop() {
           }
 
           function fitPreviewToScreen() {
+            // Do not counteract a user's pinch gesture. On mobile browsers, pinch-zoom
+            // changes the visual viewport without changing the layout viewport.
+            if (window.visualViewport && Math.abs(window.visualViewport.scale - 1) > 0.01) {
+              return;
+            }
+
             const viewport = document.getElementById("sheetViewport");
             const sheet = document.getElementById("sheetContent");
             const toolbar = document.querySelector(".preview-toolbar");
@@ -1255,12 +1262,10 @@ function addStop() {
             const naturalHeight = sheet.offsetHeight;
             if (!naturalWidth || !naturalHeight) return;
 
-            const screenWidth = window.visualViewport
-              ? window.visualViewport.width
-              : (document.documentElement.clientWidth || window.innerWidth);
-            const screenHeight = window.visualViewport
-              ? window.visualViewport.height
-              : (document.documentElement.clientHeight || window.innerHeight);
+            // Use the stable layout viewport. visualViewport dimensions shrink
+            // during pinch-zoom and previously made the sheet scale backward.
+            const screenWidth = document.documentElement.clientWidth || window.innerWidth;
+            const screenHeight = window.innerHeight || document.documentElement.clientHeight;
             const pageSpacing = screenWidth <= 600 ? 16 : 32;
             const availableWidth = Math.max(1, screenWidth - pageSpacing);
             const availableHeight = Math.max(
@@ -1277,6 +1282,20 @@ function addStop() {
             sheet.style.transform = "scale(" + scale + ")";
             viewport.style.width = (naturalWidth * scale) + "px";
             viewport.style.height = (naturalHeight * scale) + "px";
+            lastPreviewLayoutWidth = screenWidth;
+          }
+
+          let lastPreviewLayoutWidth = 0;
+
+          function handlePreviewLayoutResize() {
+            if (window.visualViewport && Math.abs(window.visualViewport.scale - 1) > 0.01) {
+              return;
+            }
+
+            const currentLayoutWidth = document.documentElement.clientWidth || window.innerWidth;
+            if (Math.abs(currentLayoutWidth - lastPreviewLayoutWidth) > 2) {
+              fitPreviewToScreen();
+            }
           }
 
           function generateTimesheetPdf() {
@@ -1363,10 +1382,10 @@ function addStop() {
           }
 
           window.addEventListener("load", fitPreviewToScreen);
-          window.addEventListener("resize", fitPreviewToScreen);
-          if (window.visualViewport) {
-            window.visualViewport.addEventListener("resize", fitPreviewToScreen);
-          }
+          window.addEventListener("resize", handlePreviewLayoutResize);
+          window.addEventListener("orientationchange", function() {
+            setTimeout(fitPreviewToScreen, 250);
+          });
           requestAnimationFrame(fitPreviewToScreen);
           setTimeout(fitPreviewToScreen, 250);
         <\/script>
