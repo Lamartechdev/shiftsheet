@@ -1010,7 +1010,17 @@ function addStop() {
     }
 
     // ========== PRINT / PDF ==========
+    let activePreviewWindow = null;
+
     function generateTimesheet() {
+      // If a previous preview window is still lingering (didn't fully close
+      // before this new Generate tap), close it first so it isn't competing
+      // for layout/rendering resources with the new one — that contention is
+      // what was throwing off the size measurement on repeat generates.
+      if (activePreviewWindow && !activePreviewWindow.closed) {
+        try { activePreviewWindow.close(); } catch (err) { /* ignore */ }
+      }
+
       const name = document.getElementById("driverName").value || "—";
   
       const date = document.getElementById("shiftDate").value || "";
@@ -1145,6 +1155,7 @@ function addStop() {
 
       // Open preview window (scrollable/zoomable — no auto-print)
       const printWin = window.open("", "_blank");
+      activePreviewWindow = printWin;
       printWin.document.write(`<!DOCTYPE html><html><head><title>Elite Fuels Timesheet</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
         <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>
@@ -1388,18 +1399,34 @@ function addStop() {
           });
           requestAnimationFrame(fitPreviewToScreen);
 
-          // A brand-new popup window doesn't always report its true size right
-          // away — the browser can still be settling into place, especially on
-          // Android. A single early measurement can lock in a wrong (tiny) scale
-          // with nothing afterward to correct it. So instead of trusting one or
-          // two fixed-delay checks, keep re-measuring for a couple seconds and
-          // let each pass self-correct the previous one.
-          let previewSettleAttempts = 0;
-          const previewSettleTimer = setInterval(function() {
-            fitPreviewToScreen();
-            previewSettleAttempts++;
-            if (previewSettleAttempts >= 10) clearInterval(previewSettleTimer);
-          }, 150);
+          // A popup window doesn't always report its true size right away —
+          // the browser can still be settling into place, especially on
+          // Android. A single early measurement can lock in a wrong (tiny)
+          // scale with nothing afterward to correct it. So instead of
+          // trusting one fixed-delay check, keep re-measuring for a couple
+          // seconds and let each pass self-correct the previous one.
+          let previewSettleTimer = null;
+          function runPreviewSettlePoll() {
+            if (previewSettleTimer) clearInterval(previewSettleTimer);
+            let attempts = 0;
+            previewSettleTimer = setInterval(function() {
+              fitPreviewToScreen();
+              attempts++;
+              if (attempts >= 16) clearInterval(previewSettleTimer);
+            }, 150);
+          }
+          runPreviewSettlePoll();
+
+          // Switching away from this tab and back (checking another app,
+          // then returning) makes the browser report the same wrong,
+          // transitional size again when it restores the tab — same root
+          // cause as the initial-open case. Re-run the settle poll any time
+          // the tab becomes visible/focused again, not just on first load.
+          document.addEventListener("visibilitychange", function() {
+            if (document.visibilityState === "visible") runPreviewSettlePoll();
+          });
+          window.addEventListener("pageshow", runPreviewSettlePoll);
+          window.addEventListener("focus", runPreviewSettlePoll);
 
           // Also catch any late reflow from the sheet's own content (e.g. a
           // logo image finishing its layout pass) after the settle window ends.
