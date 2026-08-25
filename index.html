@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>ShiftSheet – Timesheet</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
     :root {
       --primary: #1a365d;
@@ -264,11 +265,82 @@
       font-weight: 700;
       cursor: pointer;
     }
+    /* ===== In-page preview overlay (replaces the old popup window) ===== */
+    #previewOverlay{
+      display:none;
+      position:fixed; inset:0; z-index:9998;
+      background:#525659;
+      overflow-y:auto; overflow-x:hidden;
+      -webkit-overflow-scrolling:touch;
+    }
+    #previewOverlay.open{ display:flex; flex-direction:column; }
+    .preview-toolbar{
+      position:sticky; top:0; z-index:10; flex:none;
+      background:#1a365d; padding:12px;
+      display:flex; flex-wrap:wrap; justify-content:center; gap:8px;
+      box-shadow:0 2px 6px rgba(0,0,0,0.3);
+    }
+    .preview-toolbar button{
+      background:#2b6cb0; color:white; border:none;
+      padding:12px 24px; border-radius:8px; font-size:1rem;
+      font-weight:600; cursor:pointer; margin:0 !important;
+    }
+    .preview-toolbar button:active{ background:#2c5282; }
+    .sheet-viewport{ position:relative; flex:none; margin:16px auto; }
+    .sheet-wrap{
+      background:white; margin:0; padding:20px; width:800px;
+      transform-origin:top left;
+    }
+    .timesheet-page{
+      width:100%; max-width:100%; box-sizing:border-box;
+      overflow-wrap:anywhere; word-break:break-word;
+    }
+    .timesheet-page table{ max-width:100%; }
+    .timesheet-page td, .timesheet-page th{
+      overflow-wrap:anywhere; word-break:break-word;
+    }
+    .preview-closebar{
+      position:sticky; bottom:0; z-index:10;
+      flex:none; margin-top:auto;
+      display:flex; justify-content:center;
+      background:#1a365d;
+      padding:8px 12px calc(8px + env(safe-area-inset-bottom));
+      box-shadow:0 -2px 6px rgba(0,0,0,0.25);
+    }
+    .preview-closebar button{
+      width:min(100%, 320px); min-height:44px;
+      background:#4a5568; color:white; border:none;
+      padding:10px 18px; border-radius:8px; font-size:0.95rem;
+      font-weight:600; cursor:pointer;
+    }
+    .preview-closebar button:active{ background:#2d3748; }
+    @media screen and (max-width:600px){
+      .preview-toolbar{ padding:8px; }
+      .preview-toolbar button{ flex:1 1 100px; padding:10px 8px; font-size:0.82rem; }
+      .sheet-viewport{ margin:8px auto; }
+    }
     /* Print styles */
     @media print {
       body { background: white; padding: 0; }
       .no-print { display: none !important; }
       .print-only { display: block !important; }
+      /* When the preview overlay is open, print ONLY the timesheet.
+         The overlay is hoisted out of the normal flow so the rest of the
+         app never appears on the printed page / saved PDF. */
+      body.preview-printing > *:not(#previewOverlay){ display:none !important; }
+      body.preview-printing{ background:white; padding:0; margin:0; }
+      body.preview-printing #previewOverlay{
+        display:block !important; position:static !important;
+        background:white; overflow:visible; inset:auto;
+      }
+      body.preview-printing .preview-toolbar,
+      body.preview-printing .preview-closebar{ display:none !important; }
+      body.preview-printing .sheet-viewport{
+        width:auto !important; height:auto !important; margin:0 !important;
+      }
+      body.preview-printing .sheet-wrap{
+        transform:none !important; margin:0 !important; padding:0 !important;
+      }
     }
     .print-only { display: none; }
   </style>
@@ -1010,17 +1082,7 @@ function addStop() {
     }
 
     // ========== PRINT / PDF ==========
-    let activePreviewWindow = null;
-
     function generateTimesheet() {
-      // If a previous preview window is still lingering (didn't fully close
-      // before this new Generate tap), close it first so it isn't competing
-      // for layout/rendering resources with the new one — that contention is
-      // what was throwing off the size measurement on repeat generates.
-      if (activePreviewWindow && !activePreviewWindow.closed) {
-        try { activePreviewWindow.close(); } catch (err) { /* ignore */ }
-      }
-
       const name = document.getElementById("driverName").value || "—";
   
       const date = document.getElementById("shiftDate").value || "";
@@ -1153,305 +1215,190 @@ function addStop() {
         </div>
       `;
 
-      // Open preview window (scrollable/zoomable — no auto-print)
-      const printWin = window.open("", "_blank");
-      activePreviewWindow = printWin;
-      printWin.document.write(`<!DOCTYPE html><html><head><title>Elite Fuels Timesheet</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>
-        <style>
-          html, body{
-            width:100%; max-width:100%; overflow-x:hidden;
-            touch-action:pan-x pan-y pinch-zoom;
-          }
-          body{
-            margin:0; background:#525659;
-            min-height:100vh; min-height:100dvh;
-            display:flex; flex-direction:column;
-          }
-          .preview-toolbar{
-            position:sticky; top:0; z-index:10;
-            flex:none;
-            background:#1a365d; padding:12px;
-            display:flex; flex-wrap:wrap; justify-content:center; gap:8px;
-            box-shadow:0 2px 6px rgba(0,0,0,0.3);
-          }
-          .preview-toolbar button{
-            background:#2b6cb0; color:white; border:none;
-            padding:12px 24px; border-radius:8px; font-size:1rem;
-            font-weight:600; cursor:pointer; margin:0 !important;
-          }
-          .preview-toolbar button:active{ background:#2c5282; }
-          .sheet-viewport{ position:relative; flex:none; margin:16px auto; }
-          .sheet-wrap{
-            background:white; margin:0; padding:20px; width:800px;
-            transform-origin:top left;
-          }
-          .timesheet-page{
-            width:100%; max-width:100%; box-sizing:border-box;
-            overflow-wrap:anywhere; word-break:break-word;
-          }
-          .timesheet-page table{ max-width:100%; }
-          .timesheet-page td, .timesheet-page th{
-            overflow-wrap:anywhere; word-break:break-word;
-          }
-          .preview-closebar{
-            position:sticky; bottom:0; z-index:10;
-            flex:none; margin-top:auto;
-            display:flex; justify-content:center;
-            background:#1a365d;
-            padding:8px 12px calc(8px + env(safe-area-inset-bottom));
-            box-shadow:0 -2px 6px rgba(0,0,0,0.25);
-          }
-          .preview-closebar button{
-            width:min(100%, 320px); min-height:44px;
-            background:#4a5568; color:white; border:none;
-            padding:10px 18px; border-radius:8px; font-size:0.95rem;
-            font-weight:600; cursor:pointer;
-          }
-          .preview-closebar button:active{ background:#2d3748; }
-          @media screen and (max-width:600px){
-            .preview-toolbar{ padding:8px; }
-            .preview-toolbar button{
-              flex:1 1 100px; padding:10px 8px; font-size:0.82rem;
-            }
-            .sheet-viewport{ margin:8px auto; }
-          }
-          @media print{
-            .preview-toolbar, .preview-closebar{ display:none; }
-            html, body{ overflow:visible; background:white; min-height:auto; }
-            body{ display:block; }
-            .sheet-viewport{ width:auto !important; height:auto !important; margin:0; }
-            .sheet-wrap{ transform:none !important; margin:0; padding:0; }
-          }
-        </style></head><body>
-       <div class="preview-toolbar">
-          <button onclick="window.print()">Print / Save as PDF</button>
-          <button id="downloadBtn" onclick="downloadPdf()" style="background:#c05621; color:white; border:none; padding:12px 24px; border-radius:8px; font-size:1rem; font-weight:600; margin-left:8px;">Download PDF</button>
-          <button id="emailBtn" onclick="downloadThenEmail()" style="background:#276749; color:white; border:none; padding:12px 24px; border-radius:8px; font-size:1rem; font-weight:600; margin-left:8px;">Email Timesheet</button>
-        </div>
-        <script>
-          function closePreview() {
-            if (window.opener && !window.opener.closed) {
-              try {
-                window.opener.focus();
-              } catch (err) {
-                // Continue to close the preview even if Safari will not focus the opener.
-              }
-              window.close();
+      // Show the preview as an in-page overlay. No popup window is opened —
+      // popups on mobile browsers report unreliable viewport sizes (which caused
+      // the shrunken second-generate bug) and iOS Safari often blocks them
+      // outright. Rendering in this same document behaves identically across
+      // Brave, Chrome, and Safari.
+      previewFileStamp = "timesheet-" + date + "-" + timeStamp + ".pdf";
+      previewMailtoLink = mailtoLink;
 
-              // iOS Safari normally closes script-opened previews. If it does not,
-              // return through browser history as a safe fallback.
-              setTimeout(function() {
-                if (!window.closed && history.length > 1) history.back();
-              }, 200);
-              return;
-            }
+      const overlay = document.getElementById("previewOverlay");
+      document.getElementById("sheetContent").innerHTML = html;
+      overlay.classList.add("open");
+      overlay.scrollTop = 0;
+      document.body.style.overflow = "hidden";
 
-            if (history.length > 1) {
-              history.back();
-            } else {
-              window.close();
-            }
-          }
+      // Reset any leftover scale from a previous preview before re-measuring.
+      const sheetEl = document.getElementById("sheetContent");
+      sheetEl.style.transform = "none";
+      fitPreviewToScreen();
+      requestAnimationFrame(fitPreviewToScreen);
+      setTimeout(fitPreviewToScreen, 60);
+    }
 
-          function fitPreviewToScreen() {
-            // Do not counteract a user's pinch gesture. On mobile browsers, pinch-zoom
-            // changes the visual viewport without changing the layout viewport.
-            if (window.visualViewport && Math.abs(window.visualViewport.scale - 1) > 0.01) {
-              return;
-            }
+    // ========== IN-PAGE PREVIEW CONTROLS ==========
+    let previewFileStamp = "timesheet.pdf";
+    let previewMailtoLink = "";
+    let lastPreviewLayoutWidth = 0;
 
-            const viewport = document.getElementById("sheetViewport");
-            const sheet = document.getElementById("sheetContent");
-            const toolbar = document.querySelector(".preview-toolbar");
-            const closebar = document.querySelector(".preview-closebar");
-            if (!viewport || !sheet) return;
+    function closePreview() {
+      const overlay = document.getElementById("previewOverlay");
+      overlay.classList.remove("open");
+      document.body.style.overflow = "";
+    }
 
-            sheet.style.transform = "none";
-            const naturalWidth = sheet.offsetWidth;
-            const naturalHeight = sheet.offsetHeight;
-            if (!naturalWidth || !naturalHeight) return;
+    function fitPreviewToScreen() {
+      const overlay = document.getElementById("previewOverlay");
+      if (!overlay || !overlay.classList.contains("open")) return;
 
-            // Use the stable layout viewport. visualViewport dimensions shrink
-            // during pinch-zoom and previously made the sheet scale backward.
-            const screenWidth = document.documentElement.clientWidth || window.innerWidth;
-            const screenHeight = window.innerHeight || document.documentElement.clientHeight;
-            const pageSpacing = screenWidth <= 600 ? 16 : 32;
-            const availableWidth = Math.max(1, screenWidth - pageSpacing);
-            const availableHeight = Math.max(
-              1,
-              screenHeight - (toolbar ? toolbar.offsetHeight : 0) -
-              (closebar ? closebar.offsetHeight : 0) - pageSpacing
-            );
-            const scale = Math.min(
-              1,
-              availableWidth / naturalWidth,
-              availableHeight / naturalHeight
-            );
+      // Do not counteract a user's pinch gesture. On mobile browsers, pinch-zoom
+      // changes the visual viewport without changing the layout viewport.
+      if (window.visualViewport && Math.abs(window.visualViewport.scale - 1) > 0.01) {
+        return;
+      }
 
-            sheet.style.transform = "scale(" + scale + ")";
-            viewport.style.width = (naturalWidth * scale) + "px";
-            viewport.style.height = (naturalHeight * scale) + "px";
-            lastPreviewLayoutWidth = screenWidth;
+      const viewport = document.getElementById("sheetViewport");
+      const sheet = document.getElementById("sheetContent");
+      const toolbar = overlay.querySelector(".preview-toolbar");
+      const closebar = overlay.querySelector(".preview-closebar");
+      if (!viewport || !sheet) return;
+
+      // Clear the previous scale AND the viewport box before measuring, so each
+      // run measures the sheet at its true natural size rather than inheriting
+      // the constrained box left behind by the previous run.
+      sheet.style.transform = "none";
+      viewport.style.width = "";
+      viewport.style.height = "";
+
+      const naturalWidth = sheet.offsetWidth;
+      const naturalHeight = sheet.offsetHeight;
+      if (!naturalWidth || !naturalHeight) return;
+
+      const screenWidth = document.documentElement.clientWidth || window.innerWidth;
+      const screenHeight = window.innerHeight || document.documentElement.clientHeight;
+      const pageSpacing = screenWidth <= 600 ? 16 : 32;
+      const availableWidth = Math.max(1, screenWidth - pageSpacing);
+      const availableHeight = Math.max(
+        1,
+        screenHeight - (toolbar ? toolbar.offsetHeight : 0) -
+        (closebar ? closebar.offsetHeight : 0) - pageSpacing
+      );
+      const scale = Math.min(1, availableWidth / naturalWidth, availableHeight / naturalHeight);
+
+      sheet.style.transform = "scale(" + scale + ")";
+      viewport.style.width = (naturalWidth * scale) + "px";
+      viewport.style.height = (naturalHeight * scale) + "px";
+      lastPreviewLayoutWidth = screenWidth;
+    }
+
+    function handlePreviewLayoutResize() {
+      if (window.visualViewport && Math.abs(window.visualViewport.scale - 1) > 0.01) return;
+      const currentLayoutWidth = document.documentElement.clientWidth || window.innerWidth;
+      if (Math.abs(currentLayoutWidth - lastPreviewLayoutWidth) > 2) fitPreviewToScreen();
+    }
+
+    window.addEventListener("resize", handlePreviewLayoutResize);
+    window.addEventListener("orientationchange", function() {
+      setTimeout(fitPreviewToScreen, 250);
+    });
+
+    function printPreview() {
+      // Tag the body so the print stylesheet shows only the timesheet.
+      const sheet = document.getElementById("sheetContent");
+      const prevTransform = sheet.style.transform;
+      sheet.style.transform = "none";
+      document.body.classList.add("preview-printing");
+      window.print();
+      setTimeout(function() {
+        document.body.classList.remove("preview-printing");
+        sheet.style.transform = prevTransform;
+        fitPreviewToScreen();
+      }, 300);
+    }
+
+    function generateTimesheetPdf() {
+      return new Promise((resolve, reject) => {
+        let renderHost = null;
+        try {
+          const source = document.getElementById("sheetContent");
+          const pdfRenderWidth = 740;
+          renderHost = document.createElement("div");
+          renderHost.style.cssText = "position:absolute;left:-10000px;top:0;width:740px;background:white;";
+          const element = source.cloneNode(true);
+          element.removeAttribute("id");
+          element.style.transform = "none";
+          element.style.margin = "0";
+          element.style.padding = "0";
+          element.style.boxSizing = "border-box";
+          element.style.width = pdfRenderWidth + "px";
+          element.style.maxWidth = pdfRenderWidth + "px";
+          element.style.overflow = "hidden";
+
+          const printablePage = element.querySelector(".timesheet-page");
+          if (printablePage) {
+            printablePage.style.width = "100%";
+            printablePage.style.maxWidth = "100%";
+            printablePage.style.boxSizing = "border-box";
           }
 
-          let lastPreviewLayoutWidth = 0;
-
-          function handlePreviewLayoutResize() {
-            if (window.visualViewport && Math.abs(window.visualViewport.scale - 1) > 0.01) {
-              return;
-            }
-
-            const currentLayoutWidth = document.documentElement.clientWidth || window.innerWidth;
-            if (Math.abs(currentLayoutWidth - lastPreviewLayoutWidth) > 2) {
-              fitPreviewToScreen();
-            }
-          }
-
-          function generateTimesheetPdf() {
-            return new Promise((resolve, reject) => {
-              let renderHost = null;
-              try {
-                const source = document.getElementById("sheetContent");
-                const pdfRenderWidth = 740;
-                renderHost = document.createElement("div");
-                renderHost.style.cssText = "position:absolute;left:-10000px;top:0;width:740px;background:white;";
-                const element = source.cloneNode(true);
-                element.removeAttribute("id");
-                element.style.transform = "none";
-                element.style.margin = "0";
-                element.style.padding = "0";
-                element.style.boxSizing = "border-box";
-                element.style.width = pdfRenderWidth + "px";
-                element.style.maxWidth = pdfRenderWidth + "px";
-                element.style.overflow = "hidden";
-
-                const printablePage = element.querySelector(".timesheet-page");
-                if (printablePage) {
-                  printablePage.style.width = "100%";
-                  printablePage.style.maxWidth = "100%";
-                  printablePage.style.boxSizing = "border-box";
-                }
-
-                renderHost.appendChild(element);
-                document.body.appendChild(renderHost);
-                const fullWidth = pdfRenderWidth;
-                const opt = {
-                  margin: 10,
-                  html2canvas: { scale: 2, windowWidth: fullWidth, width: fullWidth, useCORS: true, backgroundColor: "#ffffff", scrollX: 0, scrollY: 0 },
-                  jsPDF: { unit: "mm", format: "letter", orientation: "portrait", compress: true },
-                  pagebreak: { mode: ["avoid-all", "css", "legacy"] }
-                };
-                // Use html2pdf's own documented worker chain end-to-end (toPdf), and pull the
-                // jsPDF instance IT already built internally via get("pdf") — we never touch
-                // jsPDF/html2canvas as separate globals, avoiding the "constructor not found" issue.
-                html2pdf().set(opt).from(element).toPdf().get("pdf").then((pdf) => {
-                  renderHost.remove();
-                  resolve(pdf);
-                }).catch((err) => {
-                  renderHost.remove();
-                  reject(err);
-                });
-              } catch (err) {
-                if (renderHost) renderHost.remove();
-                reject(err);
-              }
-            });
-          }
-
-          function downloadPdf() {
-            const btn = document.getElementById("downloadBtn");
-            btn.textContent = "Preparing PDF...";
-            btn.disabled = true;
-            generateTimesheetPdf().then((pdf) => {
-              pdf.save("timesheet-${date}-${timeStamp}.pdf");
-              btn.textContent = "Download PDF";
-              btn.disabled = false;
-            }).catch((err) => {
-              console.error("ShiftSheet PDF generation error:", err);
-              btn.textContent = "Download PDF";
-              btn.disabled = false;
-              alert("PDF download failed" + (err && err.message ? (": " + err.message) : "") + ". Try Print / Save as PDF instead.");
-            });
-          }
-          function downloadThenEmail() {
-            const btn = document.getElementById("emailBtn");
-            btn.textContent = "Preparing PDF...";
-            btn.disabled = true;
-            generateTimesheetPdf().then((pdf) => {
-              pdf.save("timesheet-${date}-${timeStamp}.pdf");
-              btn.textContent = "Email Timesheet";
-              btn.disabled = false;
-              window.location.href = "${mailtoLink}";
-            }).catch((err) => {
-              console.error("ShiftSheet PDF generation error:", err);
-              btn.textContent = "Email Timesheet";
-              btn.disabled = false;
-              alert("PDF download failed" + (err && err.message ? (": " + err.message) : "") + ". Try Print / Save as PDF instead, then attach manually.");
-            });
-          }
-
-          window.addEventListener("load", fitPreviewToScreen);
-          window.addEventListener("resize", handlePreviewLayoutResize);
-          window.addEventListener("orientationchange", function() {
-            setTimeout(fitPreviewToScreen, 250);
+          renderHost.appendChild(element);
+          document.body.appendChild(renderHost);
+          const fullWidth = pdfRenderWidth;
+          const opt = {
+            margin: 10,
+            html2canvas: { scale: 2, windowWidth: fullWidth, width: fullWidth, useCORS: true, backgroundColor: "#ffffff", scrollX: 0, scrollY: 0 },
+            jsPDF: { unit: "mm", format: "letter", orientation: "portrait", compress: true },
+            pagebreak: { mode: ["avoid-all", "css", "legacy"] }
+          };
+          // Use html2pdf's own documented worker chain end-to-end (toPdf), and pull the
+          // jsPDF instance IT already built internally via get("pdf") — we never touch
+          // jsPDF/html2canvas as separate globals, avoiding the "constructor not found" issue.
+          html2pdf().set(opt).from(element).toPdf().get("pdf").then((pdf) => {
+            renderHost.remove();
+            resolve(pdf);
+          }).catch((err) => {
+            renderHost.remove();
+            reject(err);
           });
-          requestAnimationFrame(fitPreviewToScreen);
+        } catch (err) {
+          if (renderHost) renderHost.remove();
+          reject(err);
+        }
+      });
+    }
 
-          // A popup window doesn't always report its true size right away —
-          // the browser can still be settling into place, especially on
-          // Android. A single early measurement can lock in a wrong (tiny)
-          // scale with nothing afterward to correct it. So instead of
-          // trusting one fixed-delay check, keep re-measuring for a couple
-          // seconds and let each pass self-correct the previous one.
-          let previewSettleTimer = null;
-          function runPreviewSettlePoll() {
-            if (previewSettleTimer) clearInterval(previewSettleTimer);
-            let attempts = 0;
-            previewSettleTimer = setInterval(function() {
-              fitPreviewToScreen();
-              attempts++;
-              if (attempts >= 16) clearInterval(previewSettleTimer);
-            }, 150);
-          }
-          runPreviewSettlePoll();
+    function downloadPdf() {
+      const btn = document.getElementById("downloadBtn");
+      btn.textContent = "Preparing PDF...";
+      btn.disabled = true;
+      generateTimesheetPdf().then((pdf) => {
+        pdf.save(previewFileStamp);
+        btn.textContent = "Download PDF";
+        btn.disabled = false;
+      }).catch((err) => {
+        console.error("ShiftSheet PDF generation error:", err);
+        btn.textContent = "Download PDF";
+        btn.disabled = false;
+        alert("PDF download failed" + (err && err.message ? (": " + err.message) : "") + ". Try Print / Save as PDF instead.");
+      });
+    }
 
-          // Switching away from this tab and back (checking another app,
-          // then returning) makes the browser report the same wrong,
-          // transitional size again when it restores the tab — same root
-          // cause as the initial-open case. Re-run the settle poll any time
-          // the tab becomes visible/focused again, not just on first load.
-          document.addEventListener("visibilitychange", function() {
-            if (document.visibilityState === "visible") runPreviewSettlePoll();
-          });
-          window.addEventListener("pageshow", runPreviewSettlePoll);
-          window.addEventListener("focus", runPreviewSettlePoll);
-
-          // Also catch any late reflow from the sheet's own content (e.g. a
-          // logo image finishing its layout pass) after the settle window ends.
-          if (window.ResizeObserver) {
-            const sheetEl = document.getElementById("sheetContent");
-            if (sheetEl) {
-              let resizeObserverPrimed = false;
-              const sheetResizeObserver = new ResizeObserver(function() {
-                if (!resizeObserverPrimed) { resizeObserverPrimed = true; return; }
-                fitPreviewToScreen();
-              });
-              sheetResizeObserver.observe(sheetEl);
-            }
-          }
-        <\/script>
-
-        <div class="sheet-viewport" id="sheetViewport">
-          <div class="sheet-wrap" id="sheetContent">${html}</div>
-        </div>
-        <div class="preview-closebar">
-          <button onclick="closePreview()" aria-label="Close preview and return to timesheet">← Back to Timesheet</button>
-        </div>
-        </body></html>`);
-      printWin.document.close();
-      printWin.focus();
+    function downloadThenEmail() {
+      const btn = document.getElementById("emailBtn");
+      btn.textContent = "Preparing PDF...";
+      btn.disabled = true;
+      generateTimesheetPdf().then((pdf) => {
+        pdf.save(previewFileStamp);
+        btn.textContent = "Email Timesheet";
+        btn.disabled = false;
+        window.location.href = previewMailtoLink;
+      }).catch((err) => {
+        console.error("ShiftSheet PDF generation error:", err);
+        btn.textContent = "Email Timesheet";
+        btn.disabled = false;
+        alert("PDF download failed" + (err && err.message ? (": " + err.message) : "") + ". Try Print / Save as PDF instead, then attach manually.");
+      });
     }
 
     // ========== CLEAR ALL / START NEW SHIFT ==========
@@ -1533,5 +1480,20 @@ function addStop() {
       document.getElementById("passcodeOverlay").style.display = "none";
     }
   </script>
+
+  <!-- ===== In-page timesheet preview (replaces the old popup window) ===== -->
+  <div id="previewOverlay" role="dialog" aria-modal="true" aria-label="Timesheet preview">
+    <div class="preview-toolbar">
+      <button onclick="printPreview()">Print / Save as PDF</button>
+      <button id="downloadBtn" onclick="downloadPdf()" style="background:#c05621;">Download PDF</button>
+      <button id="emailBtn" onclick="downloadThenEmail()" style="background:#276749;">Email Timesheet</button>
+    </div>
+    <div class="sheet-viewport" id="sheetViewport">
+      <div class="sheet-wrap" id="sheetContent"></div>
+    </div>
+    <div class="preview-closebar">
+      <button onclick="closePreview()" aria-label="Close preview and return to timesheet">← Back to Timesheet</button>
+    </div>
+  </div>
 </body>
 </html>
