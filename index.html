@@ -1387,7 +1387,33 @@ function addStop() {
             setTimeout(fitPreviewToScreen, 250);
           });
           requestAnimationFrame(fitPreviewToScreen);
-          setTimeout(fitPreviewToScreen, 250);
+
+          // A brand-new popup window doesn't always report its true size right
+          // away — the browser can still be settling into place, especially on
+          // Android. A single early measurement can lock in a wrong (tiny) scale
+          // with nothing afterward to correct it. So instead of trusting one or
+          // two fixed-delay checks, keep re-measuring for a couple seconds and
+          // let each pass self-correct the previous one.
+          let previewSettleAttempts = 0;
+          const previewSettleTimer = setInterval(function() {
+            fitPreviewToScreen();
+            previewSettleAttempts++;
+            if (previewSettleAttempts >= 10) clearInterval(previewSettleTimer);
+          }, 150);
+
+          // Also catch any late reflow from the sheet's own content (e.g. a
+          // logo image finishing its layout pass) after the settle window ends.
+          if (window.ResizeObserver) {
+            const sheetEl = document.getElementById("sheetContent");
+            if (sheetEl) {
+              let resizeObserverPrimed = false;
+              const sheetResizeObserver = new ResizeObserver(function() {
+                if (!resizeObserverPrimed) { resizeObserverPrimed = true; return; }
+                fitPreviewToScreen();
+              });
+              sheetResizeObserver.observe(sheetEl);
+            }
+          }
         <\/script>
 
         <div class="sheet-viewport" id="sheetViewport">
