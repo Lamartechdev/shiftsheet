@@ -24,6 +24,7 @@
       --success: #276749;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       background: var(--bg);
@@ -1349,7 +1350,7 @@ function addStop() {
           const source = document.getElementById("sheetContent");
           const pdfRenderWidth = 740;
           renderHost = document.createElement("div");
-          renderHost.style.cssText = "position:absolute;left:-10000px;top:0;width:740px;background:white;";
+          renderHost.style.cssText = "position:absolute;left:-10000px;top:0;width:740px;background:white;-webkit-text-size-adjust:100%;text-size-adjust:100%;";
           const element = source.cloneNode(true);
           element.removeAttribute("id");
           element.style.transform = "none";
@@ -1369,6 +1370,25 @@ function addStop() {
 
           renderHost.appendChild(element);
           document.body.appendChild(renderHost);
+
+          // Auto-fit to one page. html2pdf's "avoid-all" mode will not split a
+          // block, so when the sheet runs even slightly past a page it pushes the
+          // whole bottom summary table onto page 2. If we are only modestly over,
+          // scale the sheet down just enough to fit instead. Beyond ~45% over
+          // (a very long shift) we let it paginate normally.
+          if (printablePage) {
+            const onePageHeight = pdfRenderWidth * (259.4 / 195.9);
+            const naturalHeight = printablePage.scrollHeight;
+            if (naturalHeight > onePageHeight && naturalHeight <= onePageHeight * 1.45) {
+              const fitScale = (onePageHeight / naturalHeight) * 0.985;
+              printablePage.style.transformOrigin = "top left";
+              printablePage.style.transform = "scale(" + fitScale + ")";
+              printablePage.style.width = (pdfRenderWidth / fitScale) + "px";
+              printablePage.style.maxWidth = "none";
+              element.style.height = Math.ceil(printablePage.scrollHeight * fitScale) + "px";
+            }
+          }
+
           const fullWidth = pdfRenderWidth;
           const opt = {
             margin: 10,
