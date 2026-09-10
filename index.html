@@ -512,7 +512,7 @@
       <span>Total Miles</span>
       <span id="totalMilesDisplay">0</span>
     </div>
-    <button type="button" class="btn btn-success" id="generateBtn">Generate / Print Timesheet</button>
+    <button type="button" class="btn btn-success" id="generateBtn">Preview Timesheet</button>
     <button type="button" class="btn btn-secondary no-print" id="clearAllBtn" style="background:#f5f5f5; color:#c53030; border:1px solid #ddd; margin-top:8px;">Clear All / Start New Shift</button>
     <button type="button" class="btn btn-secondary no-print" id="helpBtn" style="background:#f5f5f5; color:#718096; border:1px solid #ddd; margin-top:8px; font-size:0.8rem;">Help &amp; Home Screen Setup</button>
     <button type="button" class="btn btn-secondary no-print" id="resetAccessBtn" style="background:#f5f5f5; color:#718096; border:1px solid #ddd; margin-top:8px; font-size:0.8rem;">Log Out</button>
@@ -1527,24 +1527,88 @@ function addStop() {
         console.error("ShiftSheet PDF generation error:", err);
         btn.textContent = "Download PDF";
         btn.disabled = false;
-        alert("PDF download failed" + (err && err.message ? (": " + err.message) : "") + ". Try Print / Save as PDF instead.");
+        alert("PDF download failed" + (err && err.message ? (": " + err.message) : "") + ". Try Print instead.");
       });
     }
 
-    function downloadThenEmail() {
-      const btn = document.getElementById("emailBtn");
+    // ========== SHARE ==========
+    // The PDF exists as a blob in memory, so it can go straight into the OS
+    // share sheet with no download step. Two things to know:
+    //  1. navigator.share with files is not supported everywhere. Where it is
+    //     missing we fall back to the old behaviour (save the file, then open
+    //     the mail app), so the button always does something sensible.
+    //  2. share() needs a live user tap. Rendering the PDF takes a second or
+    //     two, and iOS may consider the tap stale by the time it finishes. We
+    //     cache the finished file and ask for one more tap in that case, which
+    //     then fires instantly.
+    let pendingShareFile = null;
+
+    function canShareFiles(file) {
+      return !!(navigator.canShare && navigator.share && navigator.canShare({ files: [file] }));
+    }
+
+    function shareFallback(pdf) {
+      pdf.save(previewFileStamp);
+      if (previewMailtoLink) window.location.href = previewMailtoLink;
+    }
+
+    function sharePdf() {
+      const btn = document.getElementById("shareBtn");
+
+      // Second tap after a stale-gesture retry: the file is ready, go now.
+      if (pendingShareFile) {
+        const file = pendingShareFile;
+        pendingShareFile = null;
+        btn.textContent = "Share";
+        navigator.share({ files: [file], title: previewFileStamp }).catch((err) => {
+          if (err && err.name === "AbortError") return;
+          console.error("ShiftSheet share error:", err);
+        });
+        return;
+      }
+
       btn.textContent = "Preparing PDF...";
       btn.disabled = true;
+
       generateTimesheetPdf().then((pdf) => {
-        pdf.save(previewFileStamp);
-        btn.textContent = "Email Timesheet";
         btn.disabled = false;
-        window.location.href = previewMailtoLink;
+        let file = null;
+        try {
+          file = new File([pdf.output("blob")], previewFileStamp, { type: "application/pdf" });
+        } catch (e) {
+          file = null;
+        }
+
+        if (!file || !canShareFiles(file)) {
+          btn.textContent = "Share";
+          shareFallback(pdf);
+          return;
+        }
+
+        navigator.share({ files: [file], title: previewFileStamp }).then(() => {
+          btn.textContent = "Share";
+        }).catch((err) => {
+          // The driver closed the share sheet. Nothing went wrong.
+          if (err && err.name === "AbortError") {
+            btn.textContent = "Share";
+            return;
+          }
+          // The tap went stale while the PDF rendered. Hold the finished file
+          // and let the next tap send it immediately.
+          if (err && err.name === "NotAllowedError") {
+            pendingShareFile = file;
+            btn.textContent = "Tap to Share";
+            return;
+          }
+          console.error("ShiftSheet share error:", err);
+          btn.textContent = "Share";
+          shareFallback(pdf);
+        });
       }).catch((err) => {
         console.error("ShiftSheet PDF generation error:", err);
-        btn.textContent = "Email Timesheet";
+        btn.textContent = "Share";
         btn.disabled = false;
-        alert("PDF download failed" + (err && err.message ? (": " + err.message) : "") + ". Try Print / Save as PDF instead, then attach manually.");
+        alert("PDF generation failed" + (err && err.message ? (": " + err.message) : "") + ". Try Print instead.");
       });
     }
 
@@ -1738,9 +1802,9 @@ function addStop() {
   <!-- ===== In-page timesheet preview (replaces the old popup window) ===== -->
   <div id="previewOverlay" role="dialog" aria-modal="true" aria-label="Timesheet preview">
     <div class="preview-toolbar">
-      <button onclick="printPreview()">Print / Save as PDF</button>
+      <button onclick="printPreview()">Print</button>
       <button id="downloadBtn" onclick="downloadPdf()" style="background:#c05621;">Download PDF</button>
-      <button id="emailBtn" onclick="downloadThenEmail()" style="background:#276749;">Email Timesheet</button>
+      <button id="shareBtn" onclick="sharePdf()" style="background:#276749;">Share</button>
     </div>
     <div class="sheet-viewport" id="sheetViewport">
       <div class="sheet-wrap" id="sheetContent"></div>
