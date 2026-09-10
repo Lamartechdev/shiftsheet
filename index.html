@@ -210,6 +210,9 @@
       box-shadow: 0 4px 10px rgba(0,0,0,0.15);
       max-height: 220px;
       overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      touch-action: pan-y;
       margin-top: -6px;
       margin-bottom: 10px;
     }
@@ -235,6 +238,9 @@
     .loc-option-add { color: var(--accent); font-weight: 600; }
     .loc-option-empty { color: #a0aec0; cursor: default; }
     .loc-option-empty:hover { background: #fff; }
+    /* Carried-forward odometer reading the driver has not edited yet.
+       Gray means "this came from the last stop"; black means "confirmed." */
+    input.odo-untouched { color: #a0aec0; }
     .manage-locations-btn {
       display: block;
       width: 100%;
@@ -666,7 +672,8 @@ function renderLocationDropdownList(stopId, query, showAll = false) {
       return `<div class="loc-option${isSelected ? " loc-option-selected" : ""}"
                    role="option" aria-selected="${isSelected ? "true" : "false"}"
                    data-location="${escapeHtml(l)}"
-                   onpointerdown="event.preventDefault(); selectLocationOption(${stopId}, this.dataset.location)">${escapeHtml(l)}</div>`;
+                   onpointerdown="event.preventDefault();"
+                   onclick="selectLocationOption(${stopId}, this.dataset.location)">${escapeHtml(l)}</div>`;
     })
     .join("");
 
@@ -675,12 +682,13 @@ function renderLocationDropdownList(stopId, query, showAll = false) {
   if (!showAll && safeQuery.length >= 2 && !exactMatch) {
     html += `<div class="loc-option loc-option-add" role="option"
                   data-location="${escapeHtml(safeQuery)}"
-                  onpointerdown="event.preventDefault(); selectLocationOption(${stopId}, this.dataset.location)">+ Add "${escapeHtml(safeQuery)}" to Saved Locations</div>`;
+                  onpointerdown="event.preventDefault();"
+                  onclick="selectLocationOption(${stopId}, this.dataset.location)">+ Add "${escapeHtml(safeQuery)}"</div>`;
   }
 
   if (!html) {
     html = safeQuery.length === 1
-      ? `<div class="loc-option loc-option-empty">Keep typing to add to Saved Locations</div>`
+      ? `<div class="loc-option loc-option-empty">Keep typing to add</div>`
       : `<div class="loc-option loc-option-empty">No matches</div>`;
   }
 
@@ -860,6 +868,12 @@ let knownActivities = [...activityOptions, ...loadCustomActivities(), "Other"];
           if (r) r.checked = true;
         }
         stops = Array.isArray(data.stops) ? data.stops : [];
+        // Shifts saved before the gray/black distinction existed have no
+        // odoTouched flag. Treat any reading already present as confirmed,
+        // so restoring mid-shift does not gray out real data.
+        stops.forEach(s => {
+          if (s.odoTouched === undefined) s.odoTouched = !!s.odometer;
+        });
         nextId = data.nextId || (stops.length ? Math.max(...stops.map(s => s.id)) + 1 : 1);
         return stops.length > 0;
       } catch (e) {
@@ -919,7 +933,7 @@ let knownActivities = [...activityOptions, ...loadCustomActivities(), "Other"];
           <label>Location</label>
           <div class="loc-combo">
             <input type="text" id="locSearch_${stop.id}" autocomplete="off"
-                   placeholder="Tap to select or type to search"
+                   placeholder="Enter location"
                    value="${escapeHtml(locationValue === "Other" ? "" : locationValue)}"
                    role="combobox" aria-autocomplete="list" aria-haspopup="listbox"
                    aria-expanded="false" aria-controls="locDropdown_${stop.id}"
@@ -980,9 +994,10 @@ let knownActivities = [...activityOptions, ...loadCustomActivities(), "Other"];
           </div>
           <label>Odometer (Miles)</label>
           <input type="number" inputmode="numeric" value="${stop.odometer || ""}"
+                 class="${index > 0 && !stop.odoTouched ? "odo-untouched" : ""}"
                  placeholder="${index === 0 ? "Starting mileage" : "Confirm or edit"}"
                  onfocus="rememberOdometer(this)"
-                 oninput="updateStop(${stop.id}, 'odometer', this.value); updateTotals()"
+                 oninput="markOdometerTouched(${stop.id}, this); updateStop(${stop.id}, 'odometer', this.value); updateTotals()"
                  onblur="updateNextOdometer(${index})">
         </div>
       `;
@@ -1100,6 +1115,7 @@ function addStop() {
         durationFormatted: "—",
         activity: stops.length === 0 ? "Pre-Trip Inspection" : "",
         odometer: prevOdo,
+        odoTouched: false,
         fuelGallons: "",
         defGallons: ""
       };
@@ -1139,6 +1155,16 @@ function addStop() {
     let odometerBeforeEdit = "";
     function rememberOdometer(el) {
       odometerBeforeEdit = el.value || "";
+    }
+
+    // The driver has typed in this odometer field, so the value is now theirs
+    // rather than a carry-over. Flip it from gray to black immediately —
+    // done on the element directly so we do not re-render mid-keystroke and
+    // knock the keyboard away.
+    function markOdometerTouched(id, el) {
+      const stop = stops.find(s => s.id === id);
+      if (stop) stop.odoTouched = true;
+      if (el) el.classList.remove("odo-untouched");
     }
 
     function updateNextOdometer(index) {
