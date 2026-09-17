@@ -1241,6 +1241,27 @@ function addStop() {
       // Rows sharing the same invoice # stay grouped together (no gap).
       // A blank spacer row is inserted whenever the invoice # changes or is blank
       // (covers pre-trip, post-trip, waiting, and fuel stops between loads).
+      // Invoice numbers for multi-order (split) loads arrive as one long run of
+      // characters. html2canvas ignores CSS word-break, so the download path
+      // overflows into the next column. Insert real spaces around separators to
+      // create genuine break points, and shrink anything still too wide.
+      function formatInvoiceForPdf(raw) {
+        const v = (raw || "").trim();
+        if (!v) return { text: "", style: "" };
+        const text = v
+          .replace(/\s*([\/,;|])\s*/g, " $1 ")
+          .replace(/\s{2,}/g, " ")
+          .trim();
+        let longest = 0;
+        text.split(/\s+/).forEach(p => { if (p.length > longest) longest = p.length; });
+        let style = "";
+        if (longest > 13) {
+          const size = Math.max(8, Math.round(14 * 13 / longest));
+          style = ` style="font-size:${size}px;"`;
+        }
+        return { text, style };
+      }
+
       let rows = "";
       let totalFuelGal = 0;
       let totalDefGal = 0;
@@ -1265,10 +1286,12 @@ function addStop() {
           rows += `<tr><td colspan="7" style="border:none; padding:5px 0;"></td></tr>`;
         }
 
+        const invoiceCell = formatInvoiceForPdf(s.invoice);
+
         rows += `
           <tr>
             <td>${s.location || ""}</td>
-            <td>${s.invoice || ""}</td>
+            <td${invoiceCell.style}>${invoiceCell.text}</td>
             <td>${s.arrived || ""}</td>
             <td>${s.left || ""}</td>
             <td>${s.durationFormatted || ""}</td>
