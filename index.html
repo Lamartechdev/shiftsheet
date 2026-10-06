@@ -952,11 +952,13 @@ let knownActivities = [...activityOptions, ...loadCustomActivities(), "Other"];
             <div>
               <label>Time Arrived</label>
               <input type="time" value="${stop.arrived || ""}"
+                     onclick="openNativePicker(this)"
                      onchange="updateStop(${stop.id}, 'arrived', this.value); recalculate(${stop.id})">
             </div>
             <div>
               <label>Time Left</label>
               <input type="time" value="${stop.left || ""}"
+                     onclick="openNativePicker(this)"
                      onchange="updateStop(${stop.id}, 'left', this.value); recalculate(${stop.id})">
             </div>
           </div>
@@ -1012,6 +1014,21 @@ let knownActivities = [...activityOptions, ...loadCustomActivities(), "Other"];
         }
       }
     }
+    // Chromium stopped opening the native time picker when you tap the
+    // field itself (the clock icon still opens it). This restores
+    // tap-anywhere behavior. Harmless on browsers that lack showPicker:
+    // the field still accepts typing either way.
+    function openNativePicker(el) {
+      if (!el || typeof el.showPicker !== "function") return;
+      try {
+        el.showPicker();
+      } catch (e) {
+        // showPicker throws without user activation, or if the browser
+        // does not support a picker for this input type. Either way the
+        // field stays usable, so there is nothing to recover from.
+      }
+    }
+
     function toggleOther(selectEl, otherId) {
       const other = document.getElementById(otherId);
       if (selectEl.value === "Other") {
