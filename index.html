@@ -68,6 +68,11 @@
       margin-bottom: 3px;
     }
     input, select, textarea {
+      /* Form controls do not inherit the body font on their own — without
+         this they fall back to whatever each browser picks, which is why
+         the date read wide and monospaced in one browser and tight in
+         another. Inheriting makes every field match the app everywhere. */
+      font-family: inherit;
       width: 100%;
       padding: 10px 12px;
       border: 1px solid #cbd5e0;
