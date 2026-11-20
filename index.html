@@ -409,6 +409,362 @@
       }
     }
     .print-only { display: none; }
+
+    /* ================= LAYOUT REFRESH (Nov 2026) =================
+       Screen-only restyle. The PDF/print builder sets its own fonts and
+       colors inline, so nothing below reaches the timesheet payroll gets. */
+    :root {
+      --primary: #12284B;
+      --accent: #1F5FBF;
+      --accent-dark: #174A96;
+      --bg: #EEF2F7;
+      --border: #DDE4EE;
+      --muted: #51627F;
+      --add: #FF8A1F;
+    }
+    body { padding: 0; color: #12284B; }
+
+    /* Top bar */
+    .app-hero {
+      background: var(--primary);
+      color: #fff;
+      padding: calc(18px + env(safe-area-inset-top)) 16px 52px;
+    }
+    .hero-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+    .app-hero h1 {
+      color: #fff;
+      text-align: left;
+      font-size: 1.6rem;
+      letter-spacing: -0.5px;
+      margin: 0;
+    }
+    .app-hero .subtitle {
+      color: #C7D3E6;
+      text-align: left;
+      margin: 2px 0 0;
+      font-size: 0.82rem;
+    }
+    .hero-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      max-width: 640px;
+      margin: 14px auto 0;
+    }
+    .chip {
+      border: none;
+      background: #233D6B;
+      color: #fff;
+      font: inherit;
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 8px 12px;
+      border-radius: 16px;
+      cursor: pointer;
+    }
+    .menu-wrap { position: relative; flex: none; }
+    .menu-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 24px;
+      border: 1px solid #5B7199;
+      background: #233D6B;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      cursor: pointer;
+    }
+    .app-menu {
+      position: absolute;
+      top: 56px;
+      right: 0;
+      width: 240px;
+      z-index: 200;
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 10px 28px rgba(18,40,75,0.28);
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .app-menu button {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      min-height: 48px;
+      padding: 0 12px;
+      border: none;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--primary);
+      font: inherit;
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-align: left;
+      cursor: pointer;
+    }
+    .app-menu button:hover, .app-menu button:active { background: var(--bg); }
+    .app-menu .menu-danger { color: #B42318; }
+    .menu-divider { height: 1px; background: var(--border); margin: 4px 8px; }
+
+    /* Running totals */
+    .totals-strip {
+      position: relative;
+      width: calc(100% - 28px);
+      max-width: 612px;
+      margin: -38px auto 0;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 6px 18px rgba(18,40,75,0.12);
+      padding: 12px 6px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .totals-strip > div {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+    .totals-strip > div + div { border-left: 1px solid var(--border); }
+    .totals-num {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--primary);
+      font-variant-numeric: tabular-nums;
+    }
+    .totals-label { font-size: 0.75rem; font-weight: 600; color: var(--muted); }
+
+    .app-main {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 16px 14px 100px;
+    }
+
+    /* Cards and fields */
+    .card {
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 2px rgba(18,40,75,0.05);
+      margin-bottom: 12px;
+    }
+    .card h2 {
+      color: var(--primary);
+      font-size: 1rem;
+      border-bottom: none;
+      padding-bottom: 0;
+      margin-bottom: 12px;
+    }
+    label { font-size: 0.8rem; color: var(--muted); margin-bottom: 5px; }
+    input, select, textarea {
+      min-height: 48px;
+      border-color: #C3CEDD;
+      border-radius: 10px;
+      color: var(--primary);
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(31,95,191,0.18);
+    }
+    .toggle-group label {
+      min-height: 46px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+      border-radius: 10px;
+      border-color: var(--border);
+      background: var(--bg);
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .toggle-group input:checked + label {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .soft-btn {
+      flex: none;
+      min-height: 44px;
+      padding: 0 16px;
+      border: none;
+      border-radius: 10px;
+      background: #E4ECF8;
+      color: var(--accent-dark);
+      font: inherit;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .card-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .card-title-row h2 { margin: 0; }
+    .driver-summary {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .driver-summary-name { display: block; font-size: 1.05rem; font-weight: 700; }
+    .driver-summary-sub { display: block; font-size: 0.85rem; color: var(--muted); }
+    .section-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--muted);
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      margin: 18px 2px 10px;
+    }
+
+    /* Stops */
+    .stop-card { border-left: 1px solid var(--border); }
+    .stop-card.is-open {
+      border: 2px solid var(--accent);
+      border-radius: 16px;
+      box-shadow: 0 6px 18px rgba(31,95,191,0.14);
+    }
+    .stop-header {
+      justify-content: flex-start;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .stop-num { flex: 1; font-size: 1.15rem; }
+    .stop-badge {
+      flex: none;
+      width: 34px;
+      height: 34px;
+      border-radius: 17px;
+      background: #E4ECF8;
+      color: var(--accent-dark);
+      font-weight: 700;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .is-open .stop-badge { background: var(--accent); color: #fff; }
+    .btn-remove { min-height: 44px; font-weight: 600; font-size: 0.9rem; color: #B42318; }
+    .stop-summary {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      padding: 12px 14px;
+      background: #fff;
+      text-align: left;
+      font: inherit;
+      color: inherit;
+      cursor: pointer;
+    }
+    .stop-summary-main {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .stop-summary-title { font-size: 0.98rem; font-weight: 700; color: var(--primary); }
+    .stop-summary-sub {
+      font-size: 0.84rem;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .stop-summary-time {
+      flex: none;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--primary);
+      font-variant-numeric: tabular-nums;
+    }
+    .stop-summary-chev { flex: none; }
+    .calc-box {
+      background: #E4ECF8;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 14px;
+      color: var(--accent-dark);
+    }
+
+    /* Time field + Now button. The Now button takes the room the chevron
+       used to, so the chevron is dropped here; the invisible native clock
+       button stays as the backup way to open the picker. */
+    .time-row { display: flex; gap: 6px; margin-bottom: 10px; }
+    .time-row .time-combo { flex: 1 1 0; min-width: 0; margin-bottom: 0; }
+    .time-row .time-combo input { padding-left: 8px; padding-right: 6px; min-width: 0; width: 100%; font-size: 15px; }
+    /* Let the two side-by-side columns shrink below the time box's built-in
+       minimum width; without this the right-hand Now button overflows. */
+    .row > div { min-width: 0; }
+    .time-row .time-combo::after { display: none; }
+    .time-row .time-combo input::-webkit-calendar-picker-indicator { width: 28px; }
+    .now-btn {
+      flex: none;
+      min-height: 48px;
+      padding: 0 10px;
+      border: none;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #fff;
+      font: inherit;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* Main actions */
+    #addStopBtn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      min-height: 60px;
+      margin: 4px 0 18px;
+      border-radius: 16px;
+      background: var(--add);
+      color: var(--primary);
+      font-size: 1.15rem;
+      font-weight: 800;
+      box-shadow: 0 6px 16px rgba(18,40,75,0.18);
+    }
+    #addStopBtn:active { transform: translateY(1px); }
+    #generateBtn {
+      min-height: 56px;
+      border-radius: 14px;
+      background: var(--primary);
+      color: #fff;
+    }
+    #clearAllBtn {
+      margin-top: 10px;
+      background: transparent;
+      color: #B42318;
+      font-size: 0.92rem;
+    }
+
+    @media (max-width: 360px) {
+      .app-main { padding-left: 10px; padding-right: 10px; }
+      .now-btn { padding: 0 9px; }
+      .totals-num { font-size: 1.3rem; }
+    }
+    /* Smallest phones: Now goes under the time box instead of beside it. */
+    @media (max-width: 340px) {
+      .time-row { flex-direction: column; }
+      .now-btn { min-height: 44px; width: 100%; }
+    }
   </style>
 </head>
 <body>
@@ -496,12 +852,71 @@
   </div>
 
 
+  <!-- TOP BAR: brand, shift chips, menu for rarely used actions -->
+  <header class="app-hero no-print">
+    <div class="hero-top">
+      <div class="hero-brand">
   <h1>ShiftSheet</h1>
   <p class="subtitle" id="appSubtitle">Driver Timesheet</p>
+      </div>
+      <div class="menu-wrap" id="menuWrap">
+        <button type="button" class="menu-btn" id="menuBtn" aria-label="Menu" aria-haspopup="true" aria-expanded="false" aria-controls="appMenu">
+          <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        </button>
+        <div class="app-menu hidden" id="appMenu">
+          <button type="button" id="helpBtn">
+            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#174A96" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7M12 17h.01"/></svg>
+            Help &amp; install guide
+          </button>
+          <button type="button" id="menuLocationsBtn">
+            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#174A96" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+            Saved locations
+          </button>
+          <button type="button" id="menuActivitiesBtn">
+            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#174A96" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>
+            Saved activities
+          </button>
+          <button type="button" id="reportProblemBtn">
+            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#174A96" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/></svg>
+            Report a problem
+          </button>
+          <div class="menu-divider"></div>
+          <button type="button" id="resetAccessBtn" class="menu-danger">
+            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B42318" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4H5v16h5M14 8l4 4-4 4M18 12H9"/></svg>
+            Log out
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="hero-chips">
+      <button type="button" class="chip" id="chipDate" onclick="setHeaderExpanded(true)">Set date</button>
+      <button type="button" class="chip" id="chipShift" onclick="setHeaderExpanded(true)">Night shift</button>
+      <button type="button" class="chip" id="chipState" onclick="setHeaderExpanded(true)">California</button>
+    </div>
+  </header>
 
+  <!-- RUNNING TOTALS -->
+  <div class="totals-strip no-print" aria-live="polite">
+    <div><span class="totals-num" id="totalTimeDisplay">00:00</span><span class="totals-label">Shift time</span></div>
+    <div><span class="totals-num" id="totalMilesDisplay">0</span><span class="totals-label">Miles</span></div>
+    <div><span class="totals-num" id="stopCountDisplay">0</span><span class="totals-label">Stops</span></div>
+  </div>
+
+  <main class="app-main">
   <!-- HEADER -->
-  <div class="card no-print">
-    <h2>Shift Header</h2>
+  <div class="card no-print" id="shiftHeaderCard">
+    <div class="driver-summary hidden" id="driverSummary">
+      <div>
+        <span class="driver-summary-name" id="summaryName"></span>
+        <span class="driver-summary-sub" id="summaryTruck"></span>
+      </div>
+      <button type="button" class="soft-btn" onclick="setHeaderExpanded(true)">Edit</button>
+    </div>
+    <div id="headerFields">
+    <div class="card-title-row">
+      <h2>Shift Header</h2>
+      <button type="button" class="soft-btn hidden" id="headerDoneBtn" onclick="setHeaderExpanded(false)">Done</button>
+    </div>
     <div class="row">
       <div>
         <label for="driverName">Driver Name</label>
@@ -545,30 +960,24 @@
         <input type="text" id="trailerNum" placeholder="Trailer number">
       </div>
     </div>
+    </div>
   </div>
 
   <!-- STOPS CONTAINER -->
+  <h2 class="section-label no-print">Stops</h2>
   <div id="stopsContainer" class="no-print"></div>
 
-  <button type="button" class="btn btn-secondary no-print" id="addStopBtn">+ Add Stop</button>
+  <button type="button" class="btn no-print" id="addStopBtn">
+    <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#12284B" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+    Add Stop
+  </button>
 
-  <!-- SUMMARY -->
-  <div class="card summary no-print">
-    <h2>Shift Totals</h2>
-    <div class="total-line">
-      <span>Total Time</span>
-      <span id="totalTimeDisplay">00:00</span>
-    </div>
-    <div class="total-line">
-      <span>Total Miles</span>
-      <span id="totalMilesDisplay">0</span>
-    </div>
-    <button type="button" class="btn btn-success" id="generateBtn">Preview Timesheet</button>
-    <button type="button" class="btn btn-secondary no-print" id="clearAllBtn" style="background:#f5f5f5; color:#c53030; border:1px solid #ddd; margin-top:8px;">Clear All / Start New Shift</button>
-    <button type="button" class="btn btn-secondary no-print" id="helpBtn" style="background:#f5f5f5; color:#718096; border:1px solid #ddd; margin-top:8px; font-size:0.8rem;">Help &amp; Home Screen Setup</button>
-    <button type="button" class="btn btn-secondary no-print" id="resetAccessBtn" style="background:#f5f5f5; color:#718096; border:1px solid #ddd; margin-top:8px; font-size:0.8rem;">Log Out</button>
-    <button type="button" class="btn btn-secondary no-print" id="reportProblemBtn" style="background:#f5f5f5; color:#718096; border:1px solid #ddd; margin-top:8px; font-size:0.8rem;">Report a Problem</button>
+  <!-- FINISH -->
+  <div class="no-print">
+    <button type="button" class="btn" id="generateBtn">Preview Timesheet</button>
+    <button type="button" class="btn" id="clearAllBtn">Clear All / Start New Shift</button>
   </div>
+  </main>
 
   <!-- PRINT VIEW (hidden until needed) -->
   <div id="printView" class="print-only"></div>
@@ -875,6 +1284,10 @@ let knownActivities = [...activityOptions, ...loadCustomActivities(), "Other"];
 
     let stops = [];
     let nextId = 1;
+    // Screen-only state: which stop card is open, and whether the shift
+    // header is expanded. Never saved, never part of the PDF.
+    let openStopId = null;
+    let headerExpanded = true;
 
     const STORAGE_KEY = "shiftSheetProgress";
 
@@ -968,17 +1381,46 @@ let knownActivities = [...activityOptions, ...loadCustomActivities(), "Other"];
     }
 
     // ========== RENDER STOP CARD ==========
+    // Only one stop is open for editing at a time; the rest show as a
+    // one-line summary. The summary is built from the same stop data, so
+    // nothing about saving or the PDF depends on which card is open.
+    function renderStopSummary(stop, index) {
+      const title = stop.activity || (index === 0 ? "Pre-Trip Inspection" : `Stop ${index + 1}`);
+      const parts = [];
+      if (stop.location && stop.location !== "Other") parts.push(stop.location);
+      if (stop.invoice) parts.push("#" + stop.invoice);
+      if (stop.arrived || stop.left) parts.push(`${stop.arrived || "--:--"} – ${stop.left || "--:--"}`);
+      const sub = parts.length ? parts.map(escapeHtml).join(" · ") : "Tap to fill in";
+      const dur = stop.durationMinutes != null ? escapeHtml(stop.durationFormatted) : "—";
+      return `
+        <button type="button" class="card stop-summary" data-id="${stop.id}"
+                aria-label="Edit stop ${index + 1}"
+                onpointerdown="event.preventDefault()" onclick="openStop(${stop.id})">
+          <span class="stop-badge">${index + 1}</span>
+          <span class="stop-summary-main">
+            <span class="stop-summary-title">${escapeHtml(title)}</span>
+            <span class="stop-summary-sub">${sub}</span>
+          </span>
+          <span class="stop-summary-time">${dur}</span>
+          <svg aria-hidden="true" class="stop-summary-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#51627F" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+      `;
+    }
+
     function renderStop(stop, index) {
+      if (stop.id !== openStopId) return renderStopSummary(stop, index);
       const isFirst = index === 0;
       const locationValue = stop.location || "";
       const activityValue = stop.activity || (isFirst ? "Pre-Trip Inspection" : "");
       const isOtherAct = activityValue === "Other" || (activityValue && !knownActivities.includes(activityValue));
 
       return `
-        <div class="card stop-card" data-id="${stop.id}">
+        <div class="card stop-card is-open" data-id="${stop.id}">
           <div class="stop-header">
+            <span class="stop-badge">${index + 1}</span>
             <span class="stop-num">Stop ${index + 1}</span>
             ${index > 0 ? `<button type="button" class="btn-remove" onclick="removeStop(${stop.id})">Remove</button>` : ""}
+            <button type="button" class="soft-btn" onpointerdown="event.preventDefault()" onclick="closeStop()">Done</button>
           </div>
 
           <label>Location</label>
@@ -993,7 +1435,6 @@ let knownActivities = [...activityOptions, ...loadCustomActivities(), "Other"];
                    onblur="handleLocationBlur(${stop.id})">
             <div id="locDropdown_${stop.id}" class="loc-dropdown hidden" role="listbox"></div>
           </div>
-       <button type="button" class="btn-secondary manage-locations-btn" onclick="openManageLocations()">Manage Saved Locations</button>
           <label>Invoice #</label>
           <input type="text" value="${stop.invoice || ""}" placeholder="Invoice number"
                  oninput="updateStop(${stop.id}, 'invoice', this.value)"
@@ -1002,20 +1443,30 @@ let knownActivities = [...activityOptions, ...loadCustomActivities(), "Other"];
           <div class="row">
             <div>
               <label>Time Arrived</label>
-              <div class="time-combo">
-                <input type="time" value="${stop.arrived || ""}"
-                       class="${stop.arrived ? "" : "is-empty"}"
-                       onclick="openNativePicker(this)"
-                       onchange="this.classList.toggle('is-empty', !this.value); updateStop(${stop.id}, 'arrived', this.value); recalculate(${stop.id})">
+              <div class="time-row">
+                <div class="time-combo">
+                  <input type="time" value="${stop.arrived || ""}"
+                         class="${stop.arrived ? "" : "is-empty"}"
+                         aria-label="Time arrived"
+                         onclick="openNativePicker(this)"
+                         onchange="this.classList.toggle('is-empty', !this.value); updateStop(${stop.id}, 'arrived', this.value); recalculate(${stop.id})">
+                </div>
+                <button type="button" class="now-btn" aria-label="Set time arrived to now"
+                        onpointerdown="event.preventDefault()" onclick="setNow(${stop.id}, 'arrived')">Now</button>
               </div>
             </div>
             <div>
               <label>Time Left</label>
-              <div class="time-combo">
-                <input type="time" value="${stop.left || ""}"
-                       class="${stop.left ? "" : "is-empty"}"
-                       onclick="openNativePicker(this)"
-                       onchange="this.classList.toggle('is-empty', !this.value); updateStop(${stop.id}, 'left', this.value); recalculate(${stop.id})">
+              <div class="time-row">
+                <div class="time-combo">
+                  <input type="time" value="${stop.left || ""}"
+                         class="${stop.left ? "" : "is-empty"}"
+                         aria-label="Time left"
+                         onclick="openNativePicker(this)"
+                         onchange="this.classList.toggle('is-empty', !this.value); updateStop(${stop.id}, 'left', this.value); recalculate(${stop.id})">
+                </div>
+                <button type="button" class="now-btn" aria-label="Set time left to now"
+                        onpointerdown="event.preventDefault()" onclick="setNow(${stop.id}, 'left')">Now</button>
               </div>
             </div>
           </div>
@@ -1034,7 +1485,6 @@ let knownActivities = [...activityOptions, ...loadCustomActivities(), "Other"];
                  value="${isOtherAct && activityValue !== "Other" ? activityValue : ""}"
                  oninput="updateStop(${stop.id}, 'activity', this.value)"
                  onblur="saveCustomActivity(this.value); renderAll();">
-       <button type="button" class="btn-secondary" style="margin-top:-4px; margin-bottom:10px; padding:8px; font-size:0.8rem;" onclick="openManageActivities()">Manage Saved Activities</button>
 <div class="${activityValue === "Fuel" ? "" : "hidden"}" id="fuelFields_${stop.id}">
             <div class="row">
               <div>
@@ -1194,11 +1644,13 @@ function addStop() {
         defGallons: ""
       };
       stops.push(newStop);
+      openStopId = newStop.id;
       renderAll();
       saveProgress();
     }
     function removeStop(id) {
       stops = stops.filter(s => s.id !== id);
+      if (openStopId === id) openStopId = stops.length ? stops[stops.length - 1].id : null;
       // re-prefill odometers after removal
       for (let i = 1; i < stops.length; i++) {
         if (!stops[i].odometer) stops[i].odometer = stops[i - 1].odometer || "";
@@ -1219,7 +1671,8 @@ function addStop() {
       const mins = calcDuration(stop.arrived, stop.left);
       stop.durationMinutes = mins;
       stop.durationFormatted = mins !== null ? minutesToHHMM(mins) : "—";
-      document.getElementById(`duration_${id}`).textContent = `Total Time: ${stop.durationFormatted}`;
+      const durationEl = document.getElementById(`duration_${id}`);
+      if (durationEl) durationEl.textContent = `Total Time: ${stop.durationFormatted}`;
       updateTotals();
       saveProgress();
     }
@@ -1274,12 +1727,103 @@ function addStop() {
       });
       const miles = (startOdo !== null && endOdo !== null) ? endOdo - startOdo : 0;
       document.getElementById("totalMilesDisplay").textContent = miles >= 0 ? miles : 0;
+      const countEl = document.getElementById("stopCountDisplay");
+      if (countEl) countEl.textContent = stops.length;
     }
 
     function renderAll() {
       const container = document.getElementById("stopsContainer");
       container.innerHTML = stops.map((s, i) => renderStop(s, i)).join("");
       updateTotals();
+    }
+
+    // ========== LAYOUT: open / collapsed stops ==========
+    // Blur first, so whatever field the driver was in runs its own
+    // on-blur logic (odometer carry-forward, location save) before the
+    // card it lives in is redrawn as a summary.
+    function blurActiveField() {
+      const el = document.activeElement;
+      if (el && el !== document.body && typeof el.blur === "function") el.blur();
+    }
+
+    function scrollToStop(id) {
+      requestAnimationFrame(() => {
+        const el = document.querySelector(`#stopsContainer [data-id="${id}"]`);
+        if (el) el.scrollIntoView({ block: "start", behavior: "smooth" });
+      });
+    }
+
+    function openStop(id) {
+      blurActiveField();
+      openStopId = id;
+      renderAll();
+      scrollToStop(id);
+    }
+
+    function closeStop() {
+      blurActiveField();
+      openStopId = null;
+      renderAll();
+    }
+
+    // Fills a time field with the current time, in the same 24-hour
+    // "HH:MM" form the time picker produces, so totals and the PDF treat
+    // it exactly like a picked time.
+    function setNow(id, field) {
+      const d = new Date();
+      const value = String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+      updateStop(id, field, value);
+      recalculate(id);
+      renderAll();
+    }
+
+    // ========== LAYOUT: shift header + chips ==========
+    function updateHeaderSummary() {
+      const name = document.getElementById("driverName").value.trim();
+      const truck = document.getElementById("truckNum").value.trim();
+      const trailer = document.getElementById("trailerNum").value.trim();
+      const dateVal = document.getElementById("shiftDate").value;
+      const shift = document.querySelector('input[name="shiftType"]:checked')?.value || "NIGHT";
+      const state = document.querySelector('input[name="stateType"]:checked')?.value || "CA";
+
+      let dateLabel = "Set date";
+      if (dateVal) {
+        const [y, m, d] = dateVal.split("-").map(Number);
+        dateLabel = new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+      }
+      document.getElementById("chipDate").textContent = dateLabel;
+      document.getElementById("chipShift").textContent = shift === "DAY" ? "Day shift" : "Night shift";
+      document.getElementById("chipState").textContent = state === "NV" ? "Nevada" : "California";
+
+      document.getElementById("summaryName").textContent = name;
+      const truckParts = [];
+      if (truck) truckParts.push("Truck " + truck);
+      if (trailer) truckParts.push("Trailer " + trailer);
+      document.getElementById("summaryTruck").textContent = truckParts.join(" · ") || "Add truck and trailer";
+
+      // The header can only fold away once there is a name to show for it.
+      const canCollapse = !!name;
+      if (!canCollapse) headerExpanded = true;
+      document.getElementById("driverSummary").classList.toggle("hidden", headerExpanded);
+      document.getElementById("headerFields").classList.toggle("hidden", !headerExpanded);
+      document.getElementById("headerDoneBtn").classList.toggle("hidden", !canCollapse);
+    }
+
+    function setHeaderExpanded(open) {
+      blurActiveField();
+      headerExpanded = open;
+      updateHeaderSummary();
+      if (open) {
+        requestAnimationFrame(() => {
+          document.getElementById("shiftHeaderCard").scrollIntoView({ block: "start", behavior: "smooth" });
+        });
+      }
+    }
+
+    // ========== LAYOUT: top menu ==========
+    function setMenuOpen(open) {
+      document.getElementById("appMenu").classList.toggle("hidden", !open);
+      document.getElementById("menuBtn").setAttribute("aria-expanded", String(open));
     }
 
     // ========== PRINT / PDF ==========
@@ -1736,26 +2280,52 @@ function addStop() {
 
       // Start fresh with one stop
       addStop();
+      headerExpanded = true;
+      updateHeaderSummary();
     }
     // ========== INIT ==========
-    document.getElementById("addStopBtn").addEventListener("click", addStop);
+    document.getElementById("addStopBtn").addEventListener("click", () => {
+      blurActiveField();
+      addStop();
+      scrollToStop(openStopId);
+    });
     document.getElementById("generateBtn").addEventListener("click", generateTimesheet);
     document.getElementById("clearAllBtn").addEventListener("click", clearAllShift);
     document.getElementById("helpBtn").addEventListener("click", openHelp);
     document.getElementById("resetAccessBtn").addEventListener("click", resetAccess);
     document.getElementById("reportProblemBtn").addEventListener("click", reportProblem);
+    document.getElementById("menuLocationsBtn").addEventListener("click", openManageLocations);
+    document.getElementById("menuActivitiesBtn").addEventListener("click", openManageActivities);
+
+    // Top menu: the button toggles it; picking an item, tapping anywhere
+    // else, or pressing Escape closes it.
+    document.getElementById("menuBtn").addEventListener("click", (e) => {
+      e.stopPropagation();
+      setMenuOpen(document.getElementById("appMenu").classList.contains("hidden"));
+    });
+    document.getElementById("appMenu").addEventListener("click", () => setMenuOpen(false));
+    document.addEventListener("click", (e) => {
+      if (!document.getElementById("menuWrap").contains(e.target)) setMenuOpen(false);
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    });
 
     // Auto-save header fields whenever they change
     ["driverName", "shiftDate", "truckNum", "trailerNum"].forEach(id => {
       document.getElementById(id).addEventListener("input", saveProgress);
+      document.getElementById(id).addEventListener("input", updateHeaderSummary);
     });
     document.querySelectorAll('input[name="shiftType"], input[name="stateType"]').forEach(el => {
       el.addEventListener("change", saveProgress);
+      el.addEventListener("change", updateHeaderSummary);
     });
 
     // Try to restore a previous in-progress shift; otherwise start fresh
     const restored = loadProgress();
     if (restored) {
+      // Reopen the last stop — that is where the driver left off.
+      openStopId = stops[stops.length - 1].id;
       renderAll();
     } else {
       // Set today's date
@@ -1764,6 +2334,10 @@ function addStop() {
       // Start with one stop
       addStop();
     }
+    // A returning driver whose name is already filled in sees the compact
+    // header; a new driver sees the full form.
+    headerExpanded = !document.getElementById("driverName").value.trim();
+    updateHeaderSummary();
 
     // ===== PASSCODE GATE =====
     // The code entered decides which company's branding loads. See COMPANIES above.
