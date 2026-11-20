@@ -677,7 +677,14 @@
       flex-direction: column;
       gap: 2px;
     }
-    .stop-summary-title { font-size: 0.98rem; font-weight: 700; color: var(--primary); }
+    .stop-summary-title {
+      font-size: 0.98rem;
+      font-weight: 700;
+      color: var(--primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
     .stop-summary-sub {
       font-size: 0.84rem;
       color: var(--muted);
@@ -1385,9 +1392,15 @@ let knownActivities = [...activityOptions, ...loadCustomActivities(), "Other"];
     // one-line summary. The summary is built from the same stop data, so
     // nothing about saving or the PDF depends on which card is open.
     function renderStopSummary(stop, index) {
-      const title = stop.activity || (index === 0 ? "Pre-Trip Inspection" : `Stop ${index + 1}`);
+      // Title line: "Stop 2 – Vinvale, CA". Trailing commas/spaces from a
+      // half-typed location ("Carson,") are trimmed for display only.
+      const place = (stop.location && stop.location !== "Other")
+        ? stop.location.replace(/[,\s]+$/, "")
+        : "";
+      const title = place ? `Stop ${index + 1} – ${place}` : `Stop ${index + 1}`;
+      const activity = stop.activity || (index === 0 ? "Pre-Trip Inspection" : "");
       const parts = [];
-      if (stop.location && stop.location !== "Other") parts.push(stop.location);
+      if (activity && activity !== "Other") parts.push(activity);
       if (stop.invoice) parts.push("#" + stop.invoice);
       if (stop.arrived || stop.left) parts.push(`${stop.arrived || "--:--"} – ${stop.left || "--:--"}`);
       const sub = parts.length ? parts.map(escapeHtml).join(" · ") : "Tap to fill in";
